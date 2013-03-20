@@ -22,7 +22,6 @@ function sendCallback(err) {
         console.error("send() error: " + err);
         if(err === "Connection closed")
             clientsToRemove.push(tmpConnection);
-        console.log('Number of connections ' + clients.length); 
     }   
 }
 
