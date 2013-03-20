@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Video Conference - WebRTC</title>  
+  <link rel="stylesheet" type="text/css" href="css/style.css" />
+  <script src="js/adapter.js"></script>
+  <script src="js/script.js"></script>
+</head>
+
+<body>	
+  <div id="livevideodivk" ><video id="sourcevid" autoplay></video></div>
+  <div id="remotevideodivk" ><video id="remotevid" autoplay style="margin-left:30px;"></video></div>
+  <br>
+  <button id="btn" type="button" onclick="startVideo();">Start video</button>
+  <button id="btn" type="button" onclick="stopVideo();">Stop video</button>
+  <button id="btn" type="button" onclick="connect();" >Connect</button>
+  <button id="btn" type="button" onclick="onHangUp();">Hang Up</button>
+  <script type="text/javascript">
+    var webRTC = webrtc({sourcevid : document.getElementById('sourcevid'), 
+        remotevid : document.getElementById('remotevid'), 
+        webSocketAddress : 'ws://192.168.16.169:1337/',
+        stunServer : "stun.l.google.com:19302"
+    });
+
+    function startVideo() {
+        webRTC.startVideo();
+    }
+
+    function stopVideo() {
+        webRTC.stopVideo();
+    }
+
+    function connect() {
+        webRTC.connect();
+    }
+
+    function onHangUp() {
+        webRTC.onHangUp();
+    }
+
+  </script>
+ 	
+</body>
+</html>
