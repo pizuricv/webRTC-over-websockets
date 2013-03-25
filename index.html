@@ -1,0 +1,186 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>WebRTC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Le styles -->
+    <link href="js/bootstrap/css/bootstrap.css" rel="stylesheet">
+    <style type="text/css">
+      body {
+        padding-top: 40px;
+        padding-bottom: 40px;
+      }
+
+      video {
+          margin-top:20px;
+          width: 320px;
+          height: 240px;
+          border: 5px solid #777;
+          background-color: #CCCCCC;
+          float: left;
+       }
+      .sidebar-nav {
+        padding: 9px 0;
+      }
+
+      @media (max-width: 980px) {
+        /* Enable use of floated navbar text */
+        .navbar-text.pull-right {
+          float: none;
+          padding-left: 5px;
+          padding-right: 5px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+
+  <div id="main">
+    <div class="navbar navbar-inverse navbar-fixed-top"> 
+      <div class="navbar-inner">
+        <div class="container-fluid">
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li><a class="ajax-modal" data-controls="people" href="#"><i class="icon-user icon-white"></i> People</a></li>
+              <li><a class="ajax-modal" data-controls="talk" href="#"><i class="icon-facetime-video icon-white"></i> Talk</a></li>
+              <li><a class="ajax-modal" data-controls="share" href="#"><i class="icon-book icon-white"></i> Share</a></li>
+              <li><a class="ajax-modal" data-controls="news" url="data/news.html" href="#"><i class="icon-bullhorn icon-white"></i> News</a></li>
+            </ul>
+            <form id="form" class="navbar-form pull-right">
+              <input id="user" class="span2" type="text" placeholder="User name">
+              <button id="submit" type="submit" class="btn">Sign in</button>
+            </form>
+          </div><!--/.nav-collapse -->
+        </div>
+      </div>
+    </div>
+
+    <div class="container-fluid"> 
+      <div class="row-fluid">
+        <div id="people">
+          <div id="people_content"></div>
+        </div><!--/people-->
+
+        <div id="talk">
+            <div id="talk_content">
+            <div class="span4">
+              <div><video id="sourcevid" autoplay></video></div>
+            </div><!--/span-->
+            <div class="span4">
+              <div><video id="remotevid" autoplay></video></div>
+            </div><!--/span-->
+
+            <div class="span2">
+              <div class="well sidebar-nav">
+                <ul class="nav nav-list">
+                  <li class="nav-header">Quick links</li>
+                  <li><a href="#">Record</a></li>
+                  <li><a href="#">Share</a></li>
+                  <li><a href="#">Chat</a></li>
+                </ul>
+              </div><!--/.well -->
+            </div><!--/span-->
+          </div><!--/talk_content-->
+        </div><!--/talk-->
+
+        <div id="share" class="span12">
+        </div><!--/share-->
+
+        <div id="me" class="span12">
+        </div><!--/me-->
+
+        <div id="news" class="span12">
+          <div id="news_content" > </div>
+        </div><!--/news-->
+
+      </div><!--/row-->
+    </div><!--/.fluid-container-->
+  </div><!--/.main-->
+
+
+    <script src="http://code.jquery.com/jquery.js"></script>
+    <script src="js/bootstrap/js/bootstrap.min.js"></script>
+    <script src="js/adapter.js"></script>
+    <script src="js/script.js"></script>
+  </body>
+
+  <script>
+    var name;
+    var webRTC;
+    $(document).ready(function() {
+      reset();
+      $('#people').fadeIn();
+      $('#people_content').load("data/people.html");
+      webRTC = webrtc({sourcevid : document.getElementById('sourcevid'), 
+        remotevid : document.getElementById('remotevid'), 
+        webSocketAddress : 'ws://192.168.17.100:1337/',
+        stunServer : "stun.l.google.com:19302"
+      });
+      webRTC.startVideo();
+      webRTC.addEventListener(chat);
+      webRTC.addPresenceListener(presenceCallback);
+    });
+
+    function chat(from, to){
+      reset("talk");
+      $('#talk').show();
+    }
+
+    function presenceCallback(who, status){
+      $(".ajax-modal").each(function(){
+        var user_id = $(this).attr('user-id'); 
+        if(user_id !== undefined && user_id === who){
+          if(status === 'on'){
+            $(this).find('img').attr('src', 'images/online-icon.png');
+          }else {
+             $(this).find('img').attr('src', 'images/offline-icon.png');
+          }
+        }       
+      });
+    }
+
+    function reset(ignore){
+      $(".ajax-modal").each(function() {
+        var modal_id = $(this).attr('data-controls');
+        if(ignore === undefined || modal_id !== ignore) 
+          $("#" + modal_id).hide();
+      });
+    }
+
+    $('#main').delegate('a.ajax-modal', 'click', function() {
+      event.preventDefault();
+      var url = $(this).attr('url');
+      var modal_id = $(this).attr('data-controls');
+      var user_id = $(this).attr('user-id');
+      reset();
+      if(url !== undefined)  
+        $("#" + modal_id + "_content").load(url);
+      if(user_id !== undefined) 
+        webRTC.connect(name, user_id);
+      $("#" + modal_id).scrollTop();
+      $("#" + modal_id).fadeIn();
+    });
+
+    $.ajaxSetup({
+    'beforeSend' : function(xhr) {
+        xhr.overrideMimeType('text/html; charset=ISO-8859-1');
+    },
+    });
+
+    $("#form").submit(function() {
+      event.preventDefault();
+      name = $("#user").val();
+      webRTC.presence(name);
+      $('#user').attr('readonly', true);
+      $("#submit").hide();
+    });
+
+
+  </script>
+</html>

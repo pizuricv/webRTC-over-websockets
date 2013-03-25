@@ -11,6 +11,8 @@
 var webrtc = function(options) {
     
     var that = {};
+    var registry = [];
+    var presenceList = [];
     
     var socket = new WebSocket(options.webSocketAddress),  
         stunServer = options.stunServer,
@@ -25,8 +27,14 @@ var webrtc = function(options) {
     var mediaConstraints = {'mandatory': {
                             'OfferToReceiveAudio':true, 
                             'OfferToReceiveVideo':true }};
+    var from, to;
 
     var logg = function(s) { console.log(s); };
+
+    that.presence = function(_name){
+        sendMessage({type: 'presence', name: _name, status: 'on'});
+        from = _name;
+    }
 
     that.startVideo = function() {
         try { 
@@ -38,6 +46,7 @@ var webrtc = function(options) {
             sourcevid.src = window.webkitURL.createObjectURL(stream);
             sourcevid.style.webkitTransform = "rotateY(180deg)";
             localStream = stream;
+            logg('local stream started');
         }
         function errorCallback(error) {
             logg('An error occurred: [CODE ' + error.code + ']');
@@ -49,16 +58,20 @@ var webrtc = function(options) {
     }
 
     // start the connection upon user request
-    that.connect = function() {
+    that.connect = function(_from, _to) {
         if (!peerConnectionStarted && localStream) {
             logg("Creating PeerConnection.");
             createPeerConnection();
         } else if (!localStream){
             alert("Please start the video first");
             logg("localStream not started");
+            return;
         } else {
             logg("peer SDP offer already made");
         }
+
+        from = _from;
+        to = _to;
 
         //create offer
         if (isRTCPeerConnection) {
@@ -79,6 +92,14 @@ var webrtc = function(options) {
             sendMessage({type: 'bye'});
             closeSession();
         }
+    }
+
+    that.addEventListener = function(f){
+        registry.push(f);
+    }
+
+    that.addPresenceListener = function(f){
+        presenceList.push(f);
     }
 
     function createPeerConnection() {
@@ -116,6 +137,10 @@ var webrtc = function(options) {
             remotevid.src = window.webkitURL.createObjectURL(event.stream);
         } else {
             remotevid.src = event.stream;
+        }
+        //fire all callbacks
+        for(var i=0, len=registry.length; i < len; i++){
+            registry[i](from, to);
         }
     }
 
@@ -169,6 +194,12 @@ var webrtc = function(options) {
 
     // send the message to the websocket server
     function sendMessage(message) {
+        if(from !== undefined){
+            message.from = from;
+        }   
+        if(to !== undefined ){
+            message.to = to;  
+        }   
         var mymsg = JSON.stringify(message);
         logg("SOCKET Send: " + mymsg);
         socket.send(mymsg);
@@ -177,7 +208,7 @@ var webrtc = function(options) {
     function processSignalingMessage(message) {
         var msg = JSON.parse(message);
         logg("processSignalingMessage type(" + msg.type + ")= " + message);
-     
+       
         if (msg.type === 'offer') {
             if (!peerConnectionStarted && localStream) {
                 createPeerConnection();
@@ -198,15 +229,31 @@ var webrtc = function(options) {
                 }
             }
         } else if (msg.type === 'answer' && peerConnectionStarted) {
+            logg("setRemoteDescription...");
             peerConn.setRemoteDescription(new RTCSessionDescription(msg));
         } else if (msg.type === 'candidate' && peerConnectionStarted) {
             var candidate = new RTCIceCandidate({sdpMLineIndex:msg.label, candidate:msg.candidate});
             peerConn.addIceCandidate(candidate);
         } else if (msg.type === 'bye' && peerConnectionStarted) {
-            onRemoteHangUp();
+            if(msg.name !== undefined){
+                for(var i=0, len=presenceList.length; i < len; i++)
+                    presenceList[i](msg.from, 'off');
+            }
+            onRemoteHangUp(); 
+        } else if (msg.type === 'presence') {
+            logg('presence from: '+ msg.name)
+            //fire all callbacks
+            for(var i=0, len=presenceList.length; i < len; i++){
+                presenceList[i](msg.name, msg.status);
+            }
         } else {
-            alert("message unknown:" + message);
+            logg("message unknown:" + message);
         }
+
+        //find better way to handle this
+        if(from !== undefined && from === msg.to){
+            logg("this is p2p for me");
+        }     
     }
 
     function processSignalingMessage00(message) {
@@ -255,6 +302,7 @@ var webrtc = function(options) {
     window.onbeforeunload = function() {
         if (peerConnectionStarted) {
             sendMessage({type: 'bye'});
+            sendMessage({type: 'presence', name: _name, status: 'off'});
         }
     }
 
