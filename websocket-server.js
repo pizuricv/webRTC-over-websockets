@@ -87,7 +87,7 @@ wsServer.on('request', function(request) {
     connection.on('close', function(connection) {
         console.log('Peer disconnected.'); 
         if(connection.name !== undefined){
-            peopleToRemove.push(connection.name);
+            //peopleToRemove.push(connection.name);
             sendPresence(connection.name, 'off');
         }
     });
