@@ -11,10 +11,9 @@
 var webrtc = function(options) {
     
     var that = {};
-    var registry = [];
-    var presenceList = [];
-    
-    var socket = new WebSocket(options.webSocketAddress),  
+    var remoteCallback;
+
+    var commChannel = options.commChannel,  
         stunServer = options.stunServer,
         sourcevid = options.sourcevid,
         remotevid = options.remotevid;
@@ -23,18 +22,13 @@ var webrtc = function(options) {
     var remoteStream;
     var peerConn = null;
     var peerConnectionStarted = false;
-    var isRTCPeerConnection = true; //RFC 5245
     var mediaConstraints = {'mandatory': {
                             'OfferToReceiveAudio':true, 
                             'OfferToReceiveVideo':true }};
-    var from, to;
-
+   
     var logg = function(s) { console.log(s); };
 
-    that.presence = function(_name){
-        sendMessage({type: 'presence', name: _name, status: 'on'});
-        from = _name;
-    }
+    commChannel.addMessageCallback(processSignalingMessage);
 
     that.startVideo = function() {
         try { 
@@ -44,7 +38,7 @@ var webrtc = function(options) {
         }
         function successCallback(stream) {
             sourcevid.src = window.webkitURL.createObjectURL(stream);
-            sourcevid.style.webkitTransform = "rotateY(180deg)";
+            //sourcevid.style.webkitTransform = "rotateY(180deg)";
             localStream = stream;
             logg('local stream started');
         }
@@ -58,7 +52,7 @@ var webrtc = function(options) {
     }
 
     // start the connection upon user request
-    that.connect = function(_from, _to) {
+    that.call = function() {
         if (!peerConnectionStarted && localStream) {
             logg("Creating PeerConnection.");
             createPeerConnection();
@@ -69,37 +63,20 @@ var webrtc = function(options) {
         } else {
             logg("peer SDP offer already made");
         }
-
-        from = _from;
-        to = _to;
-
-        //create offer
-        if (isRTCPeerConnection) {
-            logg("create offer with RTC");
-            peerConn.createOffer(setLocalAndSendMessage, null, mediaConstraints);
-        } else {
-            logg("create offer without RTC");
-            var offer = peerConn.createOffer(mediaConstraints);
-            peerConn.setLocalDescription(peerConn.SDP_OFFER, offer);
-            sendMessage({type: 'offer', sdp: offer.toSdp()});
-            peerConn.startIce();
-        }
+        logg("create offer");
+        peerConn.createOffer(setLocalAndSendMessage, null, mediaConstraints);
     }
 
     that.onHangUp = function() {
         logg("Hang up.");
         if (peerConnectionStarted) {
-            sendMessage({type: 'bye'});
+            commChannel.sendMessage({type: 'bye'});
             closeSession();
         }
     }
 
-    that.addEventListener = function(f){
-        registry.push(f);
-    }
-
-    that.addPresenceListener = function(f){
-        presenceList.push(f);
+    that.addRemoteCallback = function(f){
+        remoteCallback = f;
     }
 
     function createPeerConnection() {
@@ -113,19 +90,11 @@ var webrtc = function(options) {
             logg("Connected using stun server "+ stunServer);
             peerConnectionStarted = true;
         } catch (e) {
-            try {
-                peerConn = new RTCPeerConnection('STUN ' + stunServer, onIceCandidate00);
-                isRTCPeerConnection = false;
-                logg("Connected without RTC connection");
-                peerConnectionStarted = true;
-            } catch (e) {
-                logg("Failed to create PeerConnection, exception: " + e.message);
-            }
+            alert("Failed to create PeerConnection, exception: " + e.message);
+            return;
         }
-        logg("RTCPeerConnection: " + isRTCPeerConnection); 
         peerConn.onaddstream = onRemoteStreamAdded;
         peerConn.onremovestream = onRemoteStreamRemoved;
-
         logg('Adding local stream...');
         peerConn.addStream(localStream);
     }
@@ -138,21 +107,19 @@ var webrtc = function(options) {
         } else {
             remotevid.src = event.stream;
         }
-        //fire all callbacks
-        for(var i=0, len=registry.length; i < len; i++){
-            registry[i](from, to);
-        }
+        remoteCallback(true);
     }
 
     // when remote removes a stream, remove it from the local video element
     function onRemoteStreamRemoved(event) {
         logg("Remove remote stream");
         remotevid.src = "";
+        remoteCallback(false);
     }
 
     function onIceCandidate(event) {
         if (event.candidate) {
-          sendMessage({type: 'candidate',
+          commChannel.sendMessage({type: 'candidate',
                        label: event.candidate.sdpMLineIndex,
                        id: event.candidate.sdpMid,
                        candidate: event.candidate.candidate});
@@ -161,48 +128,9 @@ var webrtc = function(options) {
         }
     }
  
-    function onIceCandidate00(candidate, moreToFollow) {
-        if (candidate) {
-            sendMessage({type: 'candidate', label: candidate.label, candidate: candidate.toSdp()});
-        }
-        if (!moreToFollow) {
-          logg("End of candidates.");
-        }
-    }
-
     function onMessage(evt) {
         logg("RECEIVED: " + evt.data);
-        if (isRTCPeerConnection)
-          processSignalingMessage(evt.data);
-        else
-          processSignalingMessage00(evt.data);
-    }
-
-
-    //########## socket related calls
-    // accept connection request
-    socket.addEventListener("message", onMessage, false);
-
-    socket.addEventListener("error", function(event) {
-        logg("SOCKET Error: " + event);
-    });
- 
-    socket.addEventListener("close", function(event) {
-        logg("SOCKET Close: " + event);
-    });
-
-
-    // send the message to the websocket server
-    function sendMessage(message) {
-        if(from !== undefined){
-            message.from = from;
-        }   
-        if(to !== undefined ){
-            message.to = to;  
-        }   
-        var mymsg = JSON.stringify(message);
-        logg("SOCKET Send: " + mymsg);
-        socket.send(mymsg);
+        processSignalingMessage(evt.data);
     }
 
     function processSignalingMessage(message) {
@@ -210,24 +138,16 @@ var webrtc = function(options) {
         logg("processSignalingMessage type(" + msg.type + ")= " + message);
        
         if (msg.type === 'offer') {
-            if (!peerConnectionStarted && localStream) {
+            if(!peerConnectionStarted && localStream) {                   
                 createPeerConnection();
-                if (isRTCPeerConnection) {
-                    //set remote description
-                    peerConn.setRemoteDescription(new RTCSessionDescription(msg));
-                    //create answer
-                    logg("Sending answer to peer.");
-                    peerConn.createAnswer(setLocalAndSendMessage, null, mediaConstraints);
-                } else {
-                    //set remote description
-                    peerConn.setRemoteDescription(peerConn.SDP_OFFER, new SessionDescription(msg.sdp));
-                    //create answer
-                    var offer = peerConn.remoteDescription;
-                    var answer = peerConn.createAnswer(offer.toSdp(), mediaConstraints);
-                    logg("Sending answer to peer.");
-                    setLocalAndSendMessage00(answer);
-                }
-            }
+                //set remote description
+                peerConn.setRemoteDescription(new RTCSessionDescription(msg));
+                //create answer
+                logg("Sending answer to peer.");
+                peerConn.createAnswer(setLocalAndSendMessage, null, mediaConstraints);                
+            } else {
+                logg('peerConnection has already been started');
+            }         
         } else if (msg.type === 'answer' && peerConnectionStarted) {
             logg("setRemoteDescription...");
             peerConn.setRemoteDescription(new RTCSessionDescription(msg));
@@ -235,58 +155,17 @@ var webrtc = function(options) {
             var candidate = new RTCIceCandidate({sdpMLineIndex:msg.label, candidate:msg.candidate});
             peerConn.addIceCandidate(candidate);
         } else if (msg.type === 'bye' && peerConnectionStarted) {
-            if(msg.name !== undefined){
-                for(var i=0, len=presenceList.length; i < len; i++)
-                    presenceList[i](msg.from, 'off');
-            }
-            onRemoteHangUp(); 
-        } else if (msg.type === 'presence') {
-            logg('presence from: '+ msg.name)
-            //fire all callbacks
-            for(var i=0, len=presenceList.length; i < len; i++){
-                presenceList[i](msg.name, msg.status);
-            }
+            onRemoteHangUp();  
         } else {
             logg("message unknown:" + message);
-        }
-
-        //find better way to handle this
-        if(from !== undefined && from === msg.to){
-            logg("this is p2p for me");
-        }     
+        } 
     }
 
-    function processSignalingMessage00(message) {
-        var msg = JSON.parse(message);
-        logg("processSignalingMessage00 type(" + msg.type +")= " + message);
-
-        //--> will never happened since isRTCPeerConnection=true initially
-        if (msg.type === 'offer')  {
-            logg("received offer type for RTC flag =" + isRTCPeerConnection);
-            alert("received offer type for RTC flag =" + isRTCPeerConnection);
-        } else if (msg.type === 'answer' && peerConnectionStarted) {
-            peerConn.setRemoteDescription(peerConn.SDP_ANSWER, new SessionDescription(msg.sdp));
-        } else if (msg.type === 'candidate' && peerConnectionStarted) {
-            var candidate = new IceCandidate(msg.label, msg.candidate);
-            peerConn.processIceMessage(candidate);
-        } else if (msg.type === 'bye' && peerConnectionStarted) {
-            onRemoteHangUp();
-        } else {
-            logg("ERROR: message not processed");
-        }
-    }
- 
     function setLocalAndSendMessage(sessionDescription) {
         peerConn.setLocalDescription(sessionDescription);
-        sendMessage(sessionDescription);
+        commChannel.sendMessage(sessionDescription);
     }
 
-    function setLocalAndSendMessage00(answer) {
-        peerConn.setLocalDescription(peerConn.SDP_ANSWER, answer);
-        sendMessage({type: 'answer', sdp: answer.toSdp()});
-        peerConn.startIce();
-    }
- 
     function onRemoteHangUp() {
         logg("Remote Hang up.");
         closeSession();
@@ -301,8 +180,7 @@ var webrtc = function(options) {
  
     window.onbeforeunload = function() {
         if (peerConnectionStarted) {
-            sendMessage({type: 'bye'});
-            sendMessage({type: 'presence', name: _name, status: 'off'});
+            commChannel.sendMessage({type: 'bye'});
         }
     }
 

@@ -61,10 +61,22 @@
       </div>
     </div>
 
+
     <div class="container-fluid"> 
       <div class="row-fluid">
         <div id="people">
           <div id="people_content"></div>
+                      <div class="span2">
+              <div class="well sidebar-nav">
+                <ul class="nav nav-list">
+                  <li class="nav-header">Quick links</li>
+                  <li><a href="#">Record</a></li>
+                  <li><a href="#">Share</a></li>
+                  <li><a href="#">Chat</a></li>
+                </ul>
+              </div><!--/.well -->
+            </div><!--/span-->
+
         </div><!--/people-->
 
         <div id="talk">
@@ -103,29 +115,88 @@
     </div><!--/.fluid-container-->
   </div><!--/.main-->
 
+  <div id="acceptModal" class="modal hide fade">
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+      <h3>Accept the call?</h3>
+    </div>
+    <div class="modal-body">
+      <p id="caller"></p>
+    </div>
+    <div class="modal-footer">
+      <a id="accept" href="#" class="btn btn-primary">Accept</a>
+      <a id="reject" href="#" class="btn">Reject</a>
+    </div>
+  </div>
+
 
     <script src="http://code.jquery.com/jquery.js"></script>
     <script src="js/bootstrap/js/bootstrap.min.js"></script>
     <script src="js/adapter.js"></script>
     <script src="js/script.js"></script>
+    <script src="js/signaling.js"></script>
   </body>
 
   <script>
-    var name;
-    var webRTC;
+    var socketAddress = 'ws://192.168.17.100:1337/';
+
+    var RTCApp = {
+      name: null,
+      webRTC: null,
+      commChannel: null,
+      message: null
+    };
+
+    RTCApp.commChannel = signaling({webSocketAddress : socketAddress, id: RTCApp.name });
+
+    RTCApp.commChannel.addPresenceCallback(presenceCallback);
+    RTCApp.commChannel.addOfferCallback(accept);
+
+  
+    RTCApp.webRTC = webrtc({sourcevid : document.getElementById('sourcevid'), 
+      remotevid : document.getElementById('remotevid'), 
+      stunServer : "stun.l.google.com:19302",
+      commChannel : RTCApp.commChannel
+    });
+    
+    RTCApp.webRTC.startVideo();
+    RTCApp.webRTC.addRemoteCallback(chat);
+    RTCApp.commChannel.addAnswerCallback(call);
+
     $(document).ready(function() {
       reset();
       $('#people').fadeIn();
       $('#people_content').load("data/people.html");
-      webRTC = webrtc({sourcevid : document.getElementById('sourcevid'), 
-        remotevid : document.getElementById('remotevid'), 
-        webSocketAddress : 'ws://192.168.17.100:1337/',
-        stunServer : "stun.l.google.com:19302"
-      });
-      webRTC.startVideo();
-      webRTC.addEventListener(chat);
-      webRTC.addPresenceListener(presenceCallback);
+      $('[id^="myCarousel"]').carousel({interval: false});
     });
+
+    $("#form").submit(function() {
+      event.preventDefault();
+      RTCApp.name = $("#user").val();    
+      RTCApp.commChannel.sendPresence(RTCApp.name, 'on');
+
+      $('#user').attr('readonly', true);
+      $("#submit").hide();
+    });
+
+    $('#accept').bind('click', function() {
+      RTCApp.commChannel.answer('accept');
+      $('#acceptModal').modal('hide');
+    });
+
+    $('#reject').bind('click', function() {
+      RTCApp.commChannel.answer('reject');
+      $('#acceptModal').modal('hide');
+    });
+
+    function accept(from){
+      $('#caller').text('You are getting a call request from ' + from);
+      $('#acceptModal').modal('show');
+    }
+
+    function call(){
+      RTCApp.webRTC.call();
+    }
 
     function chat(from, to){
       reset("talk");
@@ -161,8 +232,8 @@
       reset();
       if(url !== undefined)  
         $("#" + modal_id + "_content").load(url);
-      if(user_id !== undefined) 
-        webRTC.connect(name, user_id);
+      if(user_id !== undefined && user_id !== RTCApp.name) 
+        RTCApp.commChannel.offer(user_id);
       $("#" + modal_id).scrollTop();
       $("#" + modal_id).fadeIn();
     });
@@ -173,13 +244,11 @@
     },
     });
 
-    $("#form").submit(function() {
-      event.preventDefault();
-      name = $("#user").val();
-      webRTC.presence(name);
-      $('#user').attr('readonly', true);
-      $("#submit").hide();
-    });
+    window.onbeforeunload = function() {
+      if(RTCApp.commChannel !== null)
+        RTCApp.commChannel.sendPresence(RTCApp.name, 'off');
+    }
+
 
 
   </script>
