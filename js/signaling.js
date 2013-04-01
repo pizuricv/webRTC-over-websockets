@@ -77,13 +77,13 @@ var signaling = function(options){
         } else if (msg.type === 's-answer' && msg.origin !== myId) {
             logg('answer recevied from ' +  msg.origin + '['+ msg.answer + ']');
             if(msg.answer === 'accept')
-            	answerCallback(msg.answer);
+            	answerCallback(msg.origin, msg.answer);
         } else if (msg.type === 'presence') {
-            logg('presence from: '+ msg.origin);
+            logg('presence from: '+ msg.name);
             presenceCallback(msg.name, msg.status);
         } else {
         	if(messageCallback !== undefined) 
-        		messageCallback(message);
+        		messageCallback(message, msg.from);
         }
     }
 

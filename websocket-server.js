@@ -45,8 +45,12 @@ wsServer.on('request', function(request) {
             //parse the message
             msg = JSON.parse(message.utf8Data);
             var type = msg.type;
+            var from = msg.from;
+            var to = msg.to;
 
-            if(type !== undefined && type === 'presence'){
+            //after presence message, socket connection is 'named', 
+            //only such connections participate later.
+            if(type === 'presence'){
                 var name = msg.name;
                 var status = msg.status;
                 if(name !== undefined){
@@ -62,21 +66,17 @@ wsServer.on('request', function(request) {
                         people[name] = 'off';
                     }
                 }
-            }
-
-            var from = msg.from;
-            var to = msg.to;
-            if(to !== undefined && from !== undefined && connectionDict[to] !== undefined){
+            } else if(to !== undefined && from !== undefined && connectionDict[to] !== undefined){
                 console.log('Sending unicast from ' + from + ":"+ to);
                 connectionDict[to].send(message.utf8Data, sendCallback);
                 return;
             }
 
-            console.log('Sending broadcast');
+            console.log('Sending broadcast from '+ from);
 
-            // broadcast message to all connected clientConnections
+            // broadcast message to all connected clientConnections that have name attached
             clientConnections.forEach(function (outputConnection) {
-                if (outputConnection !== connection) {
+                if (outputConnection !== connection && outputConnection.name !== undefined) {
                     console.log('Sending data to '+ outputConnection.name);
                     outputConnection.send(message.utf8Data, sendCallback);
                 }
@@ -87,7 +87,8 @@ wsServer.on('request', function(request) {
     connection.on('close', function(connection) {
         console.log('Peer disconnected.'); 
         if(connection.name !== undefined){
-            //peopleToRemove.push(connection.name);
+            var index = clientConnections.indexOf(connection.name);
+            clientConnections.slice(index, 1);
             sendPresence(connection.name, 'off');
         }
     });

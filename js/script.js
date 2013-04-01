@@ -1,27 +1,76 @@
-/* 
- input arguments:
- var Input = {
-    sourcevid,
-    remotevid,
-    webSocketAddress,
-    stunServer
- }
-*/
-
-var webrtc = function(options) {
-    
-    var that = {};
+var webrtc = function(options) {            
+    var my = {};
     var remoteCallback;
 
     var commChannel = options.commChannel,  
         stunServer = options.stunServer,
-        sourcevid = options.sourcevid,
-        remotevid = options.remotevid;
+        sourcevid = options.sourcevid;
 
-    var localStream = null;
-    var remoteStream;
-    var peerConn = null;
-    var peerConnectionStarted = false;
+    var localStream;
+    var peerConn = {};
+
+    function RTCPeer(pc_config, name) {
+        this.from = name;
+        this.rtc = new RTCPeerConnection(pc_config);
+        that = this;
+     
+        this.rtc.onaddstream = function(event){
+            logg("Added remote stream");
+            remoteCallback(that.from, true, event.stream);
+        };
+        this.rtc.onremovestream = function(event) {
+            logg("Remove remote stream");
+            remoteCallback(that.from, false);
+        };
+        this.rtc.onicecandidate = function(event) {
+            logg("send on Icecandidate");
+            if (event.candidate) {
+              commChannel.sendMessage({type: 'candidate',
+                           label: event.candidate.sdpMLineIndex,
+                           id: event.candidate.sdpMid,
+                           candidate: event.candidate.candidate}, that.from);
+            } else {
+              logg("End of candidates.");
+            }
+        };
+    }
+
+    RTCPeer.prototype.createOffer = function(){
+        logg("createOffer to " + this.from);
+        that = this;
+        
+        var setLocalDescriptionAndMessage = function(sessionDescription){
+            logg("setLocalDescriptionAndMessage");
+            that.rtc.setLocalDescription(sessionDescription);
+            commChannel.sendMessage(sessionDescription, that.from);
+        }
+
+        this.rtc.createOffer(setLocalDescriptionAndMessage, null, mediaConstraints);
+    }
+
+    RTCPeer.prototype.createAnswer = function(){
+        logg("createAnswer to " + this.from);
+        that = this;
+        var setLocalDescriptionAndMessage = function(sessionDescription){
+            logg("setLocalDescriptionAndMessage");
+            that.rtc.setLocalDescription(sessionDescription);
+            commChannel.sendMessage(sessionDescription, that.from);
+        }
+        this.rtc.createAnswer(setLocalDescriptionAndMessage, null, mediaConstraints);
+    }
+
+    RTCPeer.prototype.getRTC = function(){
+        return this.rtc;
+    }
+
+    RTCPeer.prototype.getName = function(){
+        return this.name;
+    }
+
+    RTCPeer.prototype.getRemoteIndex = function(){
+        return this.remote;
+    }
+
     var mediaConstraints = {'mandatory': {
                             'OfferToReceiveAudio':true, 
                             'OfferToReceiveVideo':true }};
@@ -30,7 +79,7 @@ var webrtc = function(options) {
 
     commChannel.addMessageCallback(processSignalingMessage);
 
-    that.startVideo = function() {
+    my.startVideo = function() {
         try { 
             getUserMedia({audio: true, video: true}, successCallback, errorCallback);
         } catch (e) {
@@ -47,15 +96,15 @@ var webrtc = function(options) {
         }
     }
  
-    that.stopVideo = function() {
+    my.stopVideo = function() {
         sourcevid.src = "";
     }
 
     // start the connection upon user request
-    that.call = function() {
-        if (!peerConnectionStarted && localStream) {
+    my.call = function(from, answer) {
+        if (peerConn[from] === undefined && localStream) {
             logg("Creating PeerConnection.");
-            createPeerConnection();
+            createPeerConnection(from);
         } else if (!localStream){
             alert("Please start the video first");
             logg("localStream not started");
@@ -64,127 +113,84 @@ var webrtc = function(options) {
             logg("peer SDP offer already made");
         }
         logg("create offer");
-        peerConn.createOffer(setLocalAndSendMessage, null, mediaConstraints);
+        peerConn[from].createOffer();
     }
 
-    that.onHangUp = function() {
+    my.onHangUp = function() {
         logg("Hang up.");
-        if (peerConnectionStarted) {
-            commChannel.sendMessage({type: 'bye'});
-            closeSession();
-        }
+        closeSession();
     }
 
-    that.addRemoteCallback = function(f){
+    my.addRemoteCallback = function(f){
         remoteCallback = f;
     }
 
-    function createPeerConnection() {
+    function createPeerConnection(from) {
         try {
-            logg("Creating peer connection");
+            logg("Creating peer connection with " + from);
             var servers = [];
             servers.push({'url':'stun:' + stunServer});
             var pc_config = {'iceServers':servers};     
-            peerConn = new RTCPeerConnection(pc_config);
-            peerConn.onicecandidate = onIceCandidate;
+            peerConn[from] = new RTCPeer(pc_config, from);
             logg("Connected using stun server "+ stunServer);
-            peerConnectionStarted = true;
         } catch (e) {
             alert("Failed to create PeerConnection, exception: " + e.message);
             return;
         }
-        peerConn.onaddstream = onRemoteStreamAdded;
-        peerConn.onremovestream = onRemoteStreamRemoved;
         logg('Adding local stream...');
-        peerConn.addStream(localStream);
+        peerConn[from].getRTC().addStream(localStream);
     }
 
-    // when remote adds a stream, hand it on to the local video element
-    function onRemoteStreamAdded(event) {
-        logg("Added remote stream");
-        if (window.webkitURL) {
-            remotevid.src = window.webkitURL.createObjectURL(event.stream);
-        } else {
-            remotevid.src = event.stream;
-        }
-        remoteCallback(true);
-    }
-
-    // when remote removes a stream, remove it from the local video element
-    function onRemoteStreamRemoved(event) {
-        logg("Remove remote stream");
-        remotevid.src = "";
-        remoteCallback(false);
-    }
-
-    function onIceCandidate(event) {
-        if (event.candidate) {
-          commChannel.sendMessage({type: 'candidate',
-                       label: event.candidate.sdpMLineIndex,
-                       id: event.candidate.sdpMid,
-                       candidate: event.candidate.candidate});
-        } else {
-          logg("End of candidates.");
-        }
-    }
  
-    function onMessage(evt) {
-        logg("RECEIVED: " + evt.data);
-        processSignalingMessage(evt.data);
-    }
-
-    function processSignalingMessage(message) {
+    function processSignalingMessage(message, from) {
         var msg = JSON.parse(message);
         logg("processSignalingMessage type(" + msg.type + ")= " + message);
        
         if (msg.type === 'offer') {
-            if(!peerConnectionStarted && localStream) {                   
-                createPeerConnection();
+            if(peerConn[from] === undefined && localStream) {                   
+                createPeerConnection(from);
                 //set remote description
-                peerConn.setRemoteDescription(new RTCSessionDescription(msg));
+                peerConn[from].getRTC().setRemoteDescription(new RTCSessionDescription(msg));
                 //create answer
                 logg("Sending answer to peer.");
-                peerConn.createAnswer(setLocalAndSendMessage, null, mediaConstraints);                
+                peerConn[from].createAnswer();                
             } else {
                 logg('peerConnection has already been started');
             }         
-        } else if (msg.type === 'answer' && peerConnectionStarted) {
+        } else if (msg.type === 'answer' && peerConn[from] !== undefined) {
             logg("setRemoteDescription...");
-            peerConn.setRemoteDescription(new RTCSessionDescription(msg));
-        } else if (msg.type === 'candidate' && peerConnectionStarted) {
+            peerConn[from].getRTC().setRemoteDescription(new RTCSessionDescription(msg));
+        } else if (msg.type === 'candidate' && peerConn[from] !== undefined) {
             var candidate = new RTCIceCandidate({sdpMLineIndex:msg.label, candidate:msg.candidate});
-            peerConn.addIceCandidate(candidate);
-        } else if (msg.type === 'bye' && peerConnectionStarted) {
-            onRemoteHangUp();  
+            peerConn[from].getRTC().addIceCandidate(candidate);
+        } else if (msg.type === 'bye' && peerConn[from] !== undefined) {
+            onRemoteHangUp(from);  
         } else {
             logg("message unknown:" + message);
         } 
     }
 
-    function setLocalAndSendMessage(sessionDescription) {
-        peerConn.setLocalDescription(sessionDescription);
-        commChannel.sendMessage(sessionDescription);
-    }
-
-    function onRemoteHangUp() {
-        logg("Remote Hang up.");
-        closeSession();
+    function onRemoteHangUp(from) {
+        logg("Remote(" + from +  ") Hang up ");
+        peerConn[from].getRTC().close();
+        delete peerConn[from];
     }
  
     function closeSession() {
-        peerConn.close();
-        peerConn = null;
-        peerConnectionStarted = false;
-        remotevid.src = ""; 
+        for(var index in peerConn){
+            peerConn[index].getRTC().close();
+            delete peerConn[index];
+        }
     }
  
     window.onbeforeunload = function() {
-        if (peerConnectionStarted) {
+        if (Object.keys(peerConn).length > 0) {
+            closeSession();
             commChannel.sendMessage({type: 'bye'});
         }
     }
 
-    return that;
+    return my;
 };
 
 

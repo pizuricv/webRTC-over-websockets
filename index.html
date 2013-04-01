@@ -16,14 +16,18 @@
         padding-bottom: 40px;
       }
 
+      .smallVideo {
+        margin-top:10px;
+        float: right;
+      }
+
       video {
-          margin-top:20px;
-          width: 320px;
-          height: 240px;
-          border: 5px solid #777;
-          background-color: #CCCCCC;
-          float: left;
-       }
+        margin-top:5px;
+        width: 320px;
+        height: 240px;
+        float: left;
+      }
+
       .sidebar-nav {
         padding: 9px 0;
       }
@@ -66,38 +70,31 @@
       <div class="row-fluid">
         <div id="people">
           <div id="people_content"></div>
-                      <div class="span2">
-              <div class="well sidebar-nav">
-                <ul class="nav nav-list">
-                  <li class="nav-header">Quick links</li>
-                  <li><a href="#">Record</a></li>
-                  <li><a href="#">Share</a></li>
-                  <li><a href="#">Chat</a></li>
-                </ul>
-              </div><!--/.well -->
-            </div><!--/span-->
-
+          <div><video class="span2 smallVideo" id="sourceSmallvid" autoplay></video></div>
+          <div class="inner"></div><!--/inner-->
         </div><!--/people-->
 
         <div id="talk">
             <div id="talk_content">
             <div class="span4">
-              <div><video controls="controls" id="sourcevid" autoplay></video></div>
+              <div><video id="_sourcevid" autoplay></video></div>
             </div><!--/span-->
             <div class="span4">
-              <div><video controls="controls" id="remotevid" autoplay></video></div>
+              <div><video id="_remotevid1" autoplay></video></div>
             </div><!--/span-->
 
             <div class="span2">
               <div class="well sidebar-nav">
                 <ul class="nav nav-list">
                   <li class="nav-header">Quick links</li>
-                  <li><a href="#">Record</a></li>
-                  <li><a href="#">Share</a></li>
+                  <li><a href="#" onclick="record()">Record</a></li>
+                  <li><a href="#" onclick="share()">Share</a></li>
                   <li><a href="#">Chat</a></li>
                 </ul>
               </div><!--/.well -->
             </div><!--/span-->
+
+
           </div><!--/talk_content-->
         </div><!--/talk-->
 
@@ -138,7 +135,7 @@
   </body>
 
   <script>
-    var socketAddress = 'ws://192.168.17.100:1337/';
+    var socketAddress = 'ws://192.168.1.174:1337/';
 
     var RTCApp = {
       name: null,
@@ -153,15 +150,14 @@
     RTCApp.commChannel.addOfferCallback(accept);
 
   
-    RTCApp.webRTC = webrtc({sourcevid : document.getElementById('sourcevid'), 
-      remotevid : document.getElementById('remotevid'), 
+    RTCApp.webRTC = webrtc({sourcevid : document.getElementById('sourceSmallvid'),
       stunServer : "stun.l.google.com:19302",
       commChannel : RTCApp.commChannel
     });
     
     RTCApp.webRTC.startVideo();
-    RTCApp.webRTC.addRemoteCallback(chat);
-    RTCApp.commChannel.addAnswerCallback(call);
+    RTCApp.webRTC.addRemoteCallback(remoteCallback);
+    RTCApp.commChannel.addAnswerCallback(RTCApp.webRTC.call);
 
     $(document).ready(function() {
       reset();
@@ -172,6 +168,7 @@
 
     $("#form").submit(function() {
       event.preventDefault();
+
       RTCApp.name = $("#user").val();    
       RTCApp.commChannel.sendPresence(RTCApp.name, 'on');
 
@@ -194,13 +191,24 @@
       $('#acceptModal').modal('show');
     }
 
-    function call(){
-      RTCApp.webRTC.call();
-    }
-
     function chat(from, to){
       reset("talk");
       $('#talk').show();
+    }
+
+    function remoteCallback(from, added, stream){
+      var resource = 'resource_'+ from;
+      if(added){
+        if (window.webkitURL) {
+          $('.inner').append('<video class="span4" id=' + resource + ' src=' +  
+              window.webkitURL.createObjectURL(event.stream) + ' autoplay></video>');
+        } else {
+          $('.inner').append('<video class="span4" id=' + resource + ' src=' +  
+              event.stream + ' autoplay></video>');
+        }
+      } else {
+        $('#'+resource).remove();
+      }
     }
 
     function presenceCallback(who, status){
@@ -216,6 +224,14 @@
       });
     }
 
+    function record(){
+      console.log('recording');
+    }
+
+    function share(){
+      console.log('share');
+    }
+
     function reset(ignore){
       $(".ajax-modal").each(function() {
         var modal_id = $(this).attr('data-controls');
@@ -229,13 +245,15 @@
       var url = $(this).attr('url');
       var modal_id = $(this).attr('data-controls');
       var user_id = $(this).attr('user-id');
-      reset();
-      if(url !== undefined)  
-        $("#" + modal_id + "_content").load(url);
       if(user_id !== undefined && user_id !== RTCApp.name) 
         RTCApp.commChannel.offer(user_id);
-      $("#" + modal_id).scrollTop();
-      $("#" + modal_id).fadeIn();
+      if(modal_id !== undefined){
+        reset();
+        if(url !== undefined)  
+          $("#" + modal_id + "_content").load(url);
+        $("#" + modal_id).scrollTop();
+        $("#" + modal_id).fadeIn();
+      }
     });
 
     $.ajaxSetup({
