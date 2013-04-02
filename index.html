@@ -16,15 +16,9 @@
         padding-bottom: 40px;
       }
 
-      .smallVideo {
+      video {
         width: 100%;
         height: 100%;
-      }
-
-      video {
-        margin-top:5px;
-        width: 320px;
-        height: 240px;
         float: left;
       }
 
@@ -72,7 +66,7 @@
           <div id="people_content"></div>
           
           <div class="thumbnail span2">
-            <video class="smallVideo" id="sourceSmallvid" autoplay></video>
+            <video id="sourceSmallvid" autoplay></video>
           </div>
 
           <div class="inner"></div><!--/inner-->
@@ -180,17 +174,19 @@
       $("#submit").hide();
     });
 
+    var caller;
     $('#accept').bind('click', function() {
-      RTCApp.commChannel.answer('accept');
+      RTCApp.commChannel.answer(caller, 'accept');
       $('#acceptModal').modal('hide');
     });
 
     $('#reject').bind('click', function() {
-      RTCApp.commChannel.answer('reject');
+      RTCApp.commChannel.answer(caller, 'reject');
       $('#acceptModal').modal('hide');
     });
 
     function accept(from){
+      caller = from;
       $('#caller').text('You are getting a call request from ' + from);
       $('#acceptModal').modal('show');
     }

@@ -5,7 +5,6 @@ var signaling = function(options){
 
 	var myId = options.id;
 
-	var callId;
 	var that = {};
 	var offerCallback, answerCallback, presenceCallback, messageCallback;
 
@@ -36,17 +35,17 @@ var signaling = function(options){
     }
 
 	that.offer = function(_id){
-		callId = _id;
-		sendMsg({type: 's-offer', origin: myId, id: _id});
+		sendMsg({type: 's-offer', origin: myId, id: _id}, _id);
 	};
 
-	that.answer = function(_answer){
-		sendMsg({type: 's-answer', origin: myId, answer: _answer});
+	that.answer = function(to, _answer){
+		sendMsg({type: 's-answer', origin: myId, answer: _answer}, to);
 	};
 
     function sendMsg(message, to){
     	message.from = myId;
-        message.to = callId || to;  
+        if(to !== undefined)  
+            message.to = to;  
         var mymsg = JSON.stringify(message);
         logg("SOCKET Send: " + mymsg);
         socket.send(mymsg);
