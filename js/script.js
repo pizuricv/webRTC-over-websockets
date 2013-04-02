@@ -63,12 +63,8 @@ var webrtc = function(options) {
         return this.rtc;
     }
 
-    RTCPeer.prototype.getName = function(){
-        return this.name;
-    }
-
-    RTCPeer.prototype.getRemoteIndex = function(){
-        return this.remote;
+    RTCPeer.prototype.getFrom = function(){
+        return this.from;
     }
 
     var mediaConstraints = {'mandatory': {
@@ -103,7 +99,7 @@ var webrtc = function(options) {
     // start the connection upon user request
     my.call = function(from, answer) {
         if (peerConn[from] === undefined && localStream) {
-            logg("Creating PeerConnection.");
+            logg("Creating PeerConnection with "+from);
             createPeerConnection(from);
         } else if (!localStream){
             alert("Please start the video first");
@@ -172,12 +168,14 @@ var webrtc = function(options) {
 
     function onRemoteHangUp(from) {
         logg("Remote(" + from +  ") Hang up ");
+        remoteCallback(from, false);
         peerConn[from].getRTC().close();
         delete peerConn[from];
     }
  
     function closeSession() {
         for(var index in peerConn){
+            remoteCallback(peerConn[index].getFrom(), false);
             peerConn[index].getRTC().close();
             delete peerConn[index];
         }

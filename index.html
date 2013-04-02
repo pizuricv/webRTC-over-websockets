@@ -17,8 +17,8 @@
       }
 
       .smallVideo {
-        margin-top:10px;
-        float: right;
+        width: 100%;
+        height: 100%;
       }
 
       video {
@@ -70,7 +70,11 @@
       <div class="row-fluid">
         <div id="people">
           <div id="people_content"></div>
-          <div><video class="span2 smallVideo" id="sourceSmallvid" autoplay></video></div>
+          
+          <div class="thumbnail span2">
+            <video class="smallVideo" id="sourceSmallvid" autoplay></video>
+          </div>
+
           <div class="inner"></div><!--/inner-->
         </div><!--/people-->
 
@@ -135,7 +139,7 @@
   </body>
 
   <script>
-    var socketAddress = 'ws://192.168.1.174:1337/';
+    var socketAddress = 'ws://192.168.16.169:1337/';
 
     var RTCApp = {
       name: null,
