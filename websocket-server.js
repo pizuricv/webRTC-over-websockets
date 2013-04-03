@@ -4,6 +4,7 @@ var clientConnections = [];
 var people = {};
 var connectionDict = {};
 
+
 var server = http.createServer(function(request, response) {
     // process HTTP request. Since we're writing just WebSockets server
     // we don't have to implement anything.
@@ -62,8 +63,7 @@ wsServer.on('request', function(request) {
                         console.log('adding '+name)
                         people[name] = 'on';
                     } else  {
-                        console.log('removing '+name)
-                        people[name] = 'off';
+                        remove(name);
                     }
                 }
             } else if(to !== undefined && from !== undefined && connectionDict[to] !== undefined){
@@ -86,13 +86,26 @@ wsServer.on('request', function(request) {
 
     connection.on('close', function(connection) {
         console.log('Peer disconnected.'); 
-        if(connection.name !== undefined){
-            var index = clientConnections.indexOf(connection.name);
-            clientConnections.slice(index, 1);
-            sendPresence(connection.name, 'off');
+        for(var i = 0; i < clientConnections.length; i++) {
+            if(clientConnections[i] === connection) {
+                clientConnections.splice(i, 1);
+                if(connection.name !== undefined){
+                    remove(connection.name);
+                    sendPresence(connection.name, 'off');
+                }
+                break;
+            }
         }
     });
 });
+
+function remove(name){
+    console.log('removing '+ name)
+    delete people[name];
+    delete connectionDict[name];
+    var index = clientConnections.indexOf(name);
+    clientConnections.splice(index, 1);
+}
 
 function sendPresence(who, live){
     //console.log('sendind presence...');
@@ -112,8 +125,10 @@ function sendPresence(who, live){
                     connection.send(JSON.stringify({type: 'presence', name: _name, status: 'on'}), sendCallback);
                 }
             });
-            if(people[_name] ==='off')
-                delete people[_name];
+            if(people[_name] === 'off'){
+                remove(_name);
+            }
+
         }
         //console.log('sendPresence finished');
     }
