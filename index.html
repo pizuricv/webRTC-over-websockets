@@ -46,9 +46,8 @@
           <div class="nav-collapse collapse">
             <ul class="nav">
               <li><a class="ajax-modal" data-controls="people" href="#"><i class="icon-user icon-white"></i> People</a></li>
-              <li><a class="ajax-modal" data-controls="talk" href="#"><i class="icon-facetime-video icon-white"></i> Talk</a></li>
+              <li><a href="#" onclick="talkFunction()"><i class="icon-facetime-video icon-white"></i> Talk</a></li>
               <li><a class="ajax-modal" data-controls="share" href="#"><i class="icon-book icon-white"></i> Share</a></li>
-              <li><a class="ajax-modal" data-controls="news" url="data/news.html" href="#"><i class="icon-bullhorn icon-white"></i> News</a></li>
             </ul>
             <form id="form" class="navbar-form pull-right">
               <input id="user" class="span2" type="text" placeholder="User name">
@@ -72,39 +71,11 @@
           <div class="inner"></div><!--/inner-->
         </div><!--/people-->
 
-        <div id="talk">
-            <div id="talk_content">
-            <div class="span4">
-              <div><video id="_sourcevid" autoplay></video></div>
-            </div><!--/span-->
-            <div class="span4">
-              <div><video id="_remotevid1" autoplay></video></div>
-            </div><!--/span-->
-
-            <div class="span2">
-              <div class="well sidebar-nav">
-                <ul class="nav nav-list">
-                  <li class="nav-header">Quick links</li>
-                  <li><a href="#" onclick="record()">Record</a></li>
-                  <li><a href="#" onclick="share()">Share</a></li>
-                  <li><a href="#">Chat</a></li>
-                </ul>
-              </div><!--/.well -->
-            </div><!--/span-->
-
-
-          </div><!--/talk_content-->
-        </div><!--/talk-->
-
         <div id="share" class="span12">
         </div><!--/share-->
 
         <div id="me" class="span12">
         </div><!--/me-->
-
-        <div id="news" class="span12">
-          <div id="news_content" > </div>
-        </div><!--/news-->
 
       </div><!--/row-->
     </div><!--/.fluid-container-->
@@ -191,9 +162,8 @@
       $('#acceptModal').modal('show');
     }
 
-    function chat(from, to){
-      reset("talk");
-      $('#talk').show();
+    function talkFunction(){
+      $('#people_content').hide();
     }
 
     function remoteCallback(from, added, stream){
@@ -224,14 +194,6 @@
       });
     }
 
-    function record(){
-      console.log('recording');
-    }
-
-    function share(){
-      console.log('share');
-    }
-
     function reset(ignore){
       $(".ajax-modal").each(function() {
         var modal_id = $(this).attr('data-controls');
@@ -252,6 +214,7 @@
         if(url !== undefined)  
           $("#" + modal_id + "_content").load(url);
         $("#" + modal_id).scrollTop();
+        $("#" + modal_id + '_content').fadeIn();
         $("#" + modal_id).fadeIn();
       }
     });
