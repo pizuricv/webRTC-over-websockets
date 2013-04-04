@@ -39,28 +39,26 @@ var webrtc = function(options) {
         };
     }
 
-    RTCPeer.prototype.createOffer = function(){
-        logg("createOffer to " + this.from);
-        that = this;
-        
-        var setLocalDescriptionAndMessage = function(sessionDescription){
-            logg("setLocalDescriptionAndMessage");
-            that.rtc.setLocalDescription(sessionDescription);
-            commChannel.sendMessage(sessionDescription, that.from);
-        }
-
-        this.rtc.createOffer(setLocalDescriptionAndMessage, null, mediaConstraints);
+    function setLocalDescriptionAndMessage(sessionDescription){
+        logg("setLocalDescriptionAndMessage");
+        this.rtc.setLocalDescription(sessionDescription);
+        commChannel.sendMessage(sessionDescription, this.from);
     }
 
-    RTCPeer.prototype.createAnswer = function(){
+    RTCPeer.prototype.createOffer = function(callback){
+        logg("createOffer to " + this.from);
+        that = this;
+        this.rtc.createOffer(function(sessionDescription){
+            callback.call(that, sessionDescription);
+        }, null, mediaConstraints);
+    }
+
+    RTCPeer.prototype.createAnswer = function(callback){
         logg("createAnswer to " + this.from);
         that = this;
-        var setLocalDescriptionAndMessage = function(sessionDescription){
-            logg("setLocalDescriptionAndMessage");
-            that.rtc.setLocalDescription(sessionDescription);
-            commChannel.sendMessage(sessionDescription, that.from);
-        }
-        this.rtc.createAnswer(setLocalDescriptionAndMessage, null, mediaConstraints);
+        this.rtc.createAnswer(function(sessionDescription){
+            callback.call(that, sessionDescription);
+        }, null, mediaConstraints);
     }
 
     RTCPeer.prototype.getRTC = function(){
@@ -85,7 +83,6 @@ var webrtc = function(options) {
         }
         function successCallback(stream) {
             sourcevid.src = window.webkitURL.createObjectURL(stream);
-            //sourcevid.style.webkitTransform = "rotateY(180deg)";
             localStream = stream;
             logg('local stream started');
         }
@@ -116,7 +113,7 @@ var webrtc = function(options) {
             logg("peer SDP offer already made");
         }
         logg("create offer");
-        peerConn[from].createOffer();
+        peerConn[from].createOffer(setLocalDescriptionAndMessage);
     }
 
 
@@ -148,7 +145,7 @@ var webrtc = function(options) {
                 peerConn[from].getRTC().setRemoteDescription(new RTCSessionDescription(msg));
                 //create answer
                 logg("Sending answer to peer.");
-                peerConn[from].createAnswer();                
+                peerConn[from].createAnswer(setLocalDescriptionAndMessage);                
             } else {
                 logg('peerConnection has already been started');
             }         
