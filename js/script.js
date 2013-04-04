@@ -1,13 +1,17 @@
 var webrtc = function(options) {            
     var my = {};
-    var remoteCallback;
 
     var commChannel = options.commChannel,  
         stunServer = options.stunServer,
-        sourcevid = options.sourcevid;
+        sourcevid = options.sourcevid,
+        remoteCallback : options.onremote;
 
     var localStream;
     var peerConn = {};
+
+    //callback to start p2p connection between two parties
+    commChannel.addAnswerCallback(call);
+    commChannel.addMessageCallback(processSignalingMessage);
 
     function RTCPeer(pc_config, name) {
         this.from = name;
@@ -73,8 +77,6 @@ var webrtc = function(options) {
    
     var logg = function(s) { console.log(s); };
 
-    commChannel.addMessageCallback(processSignalingMessage);
-
     my.startVideo = function() {
         try { 
             getUserMedia({audio: true, video: true}, successCallback, errorCallback);
@@ -96,8 +98,13 @@ var webrtc = function(options) {
         sourcevid.src = "";
     }
 
+    my.onHangUp = function() {
+        logg("Hang up.");
+        closeSession();
+    }
+
     // start the connection upon user request
-    my.call = function(from, answer) {
+    function call(from, answer) {
         if (peerConn[from] === undefined && localStream) {
             logg("Creating PeerConnection with "+from);
             createPeerConnection(from);
@@ -112,14 +119,6 @@ var webrtc = function(options) {
         peerConn[from].createOffer();
     }
 
-    my.onHangUp = function() {
-        logg("Hang up.");
-        closeSession();
-    }
-
-    my.addRemoteCallback = function(f){
-        remoteCallback = f;
-    }
 
     function createPeerConnection(from) {
         try {

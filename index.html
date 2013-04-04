@@ -104,7 +104,7 @@
   </body>
 
   <script>
-    var socketAddress = 'ws://192.168.16.169:1337/';
+    var socketAddress = 'ws://localhost:1337/';
 
     var RTCApp = {
       name: null,
@@ -121,12 +121,11 @@
   
     RTCApp.webRTC = webrtc({sourcevid : document.getElementById('sourceSmallvid'),
       stunServer : "stun.l.google.com:19302",
-      commChannel : RTCApp.commChannel
+      commChannel : RTCApp.commChannel,
+      onremote : remoteCallback;
     });
     
     RTCApp.webRTC.startVideo();
-    RTCApp.webRTC.addRemoteCallback(remoteCallback);
-    RTCApp.commChannel.addAnswerCallback(RTCApp.webRTC.call);
 
     $(document).ready(function() {
       reset();
@@ -156,8 +155,10 @@
       $('#acceptModal').modal('hide');
     });
 
+    var snd = new Audio("data/ringtone.wav"); 
     function accept(from){
       caller = from;
+      snd.play();
       $('#caller').text('You are getting a call request from ' + from);
       $('#acceptModal').modal('show');
     }
