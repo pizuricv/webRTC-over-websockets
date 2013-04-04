@@ -4,7 +4,7 @@ var webrtc = function(options) {
     var commChannel = options.commChannel,  
         stunServer = options.stunServer,
         sourcevid = options.sourcevid,
-        remoteCallback : options.onremote;
+        remoteCallback = options.onremote;
 
     var localStream;
     var peerConn = {};
