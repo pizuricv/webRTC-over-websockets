@@ -45,9 +45,8 @@
         <div class="container-fluid">
           <div class="nav-collapse collapse">
             <ul class="nav">
-              <li><a class="ajax-modal" data-controls="people" href="#"><i class="icon-user icon-white"></i> People</a></li>
-              <li><a href="#" onclick="talkFunction()"><i class="icon-facetime-video icon-white"></i> Talk</a></li>
-              <li><a class="ajax-modal" data-controls="share" href="#"><i class="icon-book icon-white"></i> Share</a></li>
+              <li><a href="#" onclick="talkFunction(false)"><i class="icon-user icon-white"></i> People</a></li>
+              <li><a href="#" onclick="talkFunction(true)"><i class="icon-facetime-video icon-white"></i> Talk</a></li>
             </ul>
             <form id="form" class="navbar-form pull-right">
               <input id="user" class="span2" type="text" placeholder="User name">
@@ -67,6 +66,8 @@
           <div class="thumbnail span2">
             <video id="sourceSmallvid" autoplay></video>
           </div>
+
+          <div id="room_content"></div>
 
           <div class="inner"></div><!--/inner-->
         </div><!--/people-->
@@ -104,10 +105,11 @@
   </body>
 
   <script>
-    var socketAddress = 'ws://localhost:1337/';
+    var socketAddress = 'ws://192.168.16.169:1337/';
 
     var RTCApp = {
       name: null,
+      room: null,
       webRTC: null,
       commChannel: null,
       message: null
@@ -128,9 +130,9 @@
     RTCApp.webRTC.startVideo();
 
     $(document).ready(function() {
-      reset();
-      $('#people').fadeIn();
       $('#people_content').load("data/people.html");
+      $('#room_content').load("data/rooms.html");
+      $('#people').fadeIn();
       $('[id^="myCarousel"]').carousel({interval: false});
     });
 
@@ -163,8 +165,10 @@
       $('#acceptModal').modal('show');
     }
 
-    function talkFunction(){
-      $('#people_content').hide();
+    function talkFunction(flag){
+      var callback = flag === true? "hide" : "show"; 
+      $('#people_content')[callback]();
+      $('#room_content')[callback]();
     }
 
     function remoteCallback(from, added, stream){
@@ -178,10 +182,11 @@
               event.stream + ' autoplay></video>');
         }
       } else {
+        $('#'+resource).attr('src',"");
         $('#'+resource).remove();
       }
     }
-    
+
     function presenceCallback(who, status){
       $(".ajax-modal").each(function(){
         var user_id = $(this).attr('user-id'); 
@@ -189,35 +194,33 @@
           if(status === 'on'){
             $(this).find('img').attr('src', 'images/online-icon.png');
           }else {
-             $(this).find('img').attr('src', 'images/offline-icon.png');
+            $(this).find('img').attr('src', 'images/offline-icon.png');
+          }
+        }       
+      });
+      $(".ajax-room-modal").each(function(){
+        var room = $(this).attr('room-id'); 
+        if(room !== undefined && room === who){
+          if(status === 'on'){
+            $(this).find('img').attr('src', 'images/online-icon.png');
+          }else {
+            $(this).find('img').attr('src', 'images/offline-icon.png');
           }
         }       
       });
     }
 
-    function reset(ignore){
-      $(".ajax-modal").each(function() {
-        var modal_id = $(this).attr('data-controls');
-        if(ignore === undefined || modal_id !== ignore) 
-          $("#" + modal_id).hide();
-      });
-    }
-
     $('#main').delegate('a.ajax-modal', 'click', function() {
       event.preventDefault();
-      var url = $(this).attr('url');
-      var modal_id = $(this).attr('data-controls');
       var user_id = $(this).attr('user-id');
       if(user_id !== undefined && user_id !== RTCApp.name) 
         RTCApp.commChannel.offer(user_id);
-      if(modal_id !== undefined){
-        reset();
-        if(url !== undefined)  
-          $("#" + modal_id + "_content").load(url);
-        $("#" + modal_id).scrollTop();
-        $("#" + modal_id + '_content').fadeIn();
-        $("#" + modal_id).fadeIn();
-      }
+    });
+
+    $('#main').delegate('a.ajax-room-modal', 'click', function() {
+      event.preventDefault();
+      RTCApp.room = $(this).attr('room-id');
+      RTCApp.commChannel.roomOffer(RTCApp.room);
     });
 
     $.ajaxSetup({

@@ -175,12 +175,12 @@ var webrtc = function(options) {
             peerConn[index].getRTC().close();
             delete peerConn[index];
         }
+        commChannel.sendMessage({type: 'bye'});
     }
  
     window.onbeforeunload = function() {
         if (Object.keys(peerConn).length > 0) {
             closeSession();
-            commChannel.sendMessage({type: 'bye'});
         }
     }
 

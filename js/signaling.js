@@ -34,12 +34,16 @@ var signaling = function(options){
         sendMsg({type: 'presence', name: _name, status: _status});
     }
 
-	that.offer = function(_id){
-		sendMsg({type: 's-offer', origin: myId, id: _id}, _id);
+    that.roomOffer = function(room){
+        sendMsg({type: 'room'}, room);
+    }
+
+	that.offer = function(to){
+		sendMsg({type: 's-offer'}, to);
 	};
 
 	that.answer = function(to, _answer){
-		sendMsg({type: 's-answer', origin: myId, answer: _answer}, to);
+		sendMsg({type: 's-answer', answer: _answer}, to);
 	};
 
     function sendMsg(message, to){
@@ -70,13 +74,13 @@ var signaling = function(options){
         var msg = JSON.parse(message);
         logg("processSignalingMessage type(" + msg.type + ")= " + message);
        
-        if (msg.type === 's-offer' && msg.origin !== myId) {
-        	logg('offer recevied from ', msg.origin);
-        	offerCallback(msg.origin);
-        } else if (msg.type === 's-answer' && msg.origin !== myId) {
-            logg('answer recevied from ' +  msg.origin + '['+ msg.answer + ']');
+        if (msg.type === 's-offer' && msg.from !== myId) {
+        	logg('offer recevied from ', msg.from);
+        	offerCallback(msg.from);
+        } else if (msg.type === 's-answer' && msg.from !== myId) {
+            logg('answer recevied from ' +  msg.from + '['+ msg.answer + ']');
             if(msg.answer === 'accept')
-            	answerCallback(msg.origin, msg.answer);
+            	answerCallback(msg.from, msg.answer);
         } else if (msg.type === 'presence') {
             logg('presence from: '+ msg.name);
             presenceCallback(msg.name, msg.status);
