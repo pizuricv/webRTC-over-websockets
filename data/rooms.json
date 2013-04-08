@@ -1,0 +1,12 @@
+[ 
+	{
+		"name" : "Room 1",
+		"id": "room1",
+		"img" : "images/football.jpg"
+	}, 
+	{
+		"name" : "Hello World",
+		"id": "room2",
+		"img" : "images/webrtc.jpg"
+	}
+]

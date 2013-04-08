@@ -1,0 +1,47 @@
+[ 
+	{
+		"name" : "Veselin",
+		"id": "veselin",
+		"img" : "images/avatar.png"
+	}, 
+	{
+		"name" : "Johan",
+		"id": "johan",
+		"img" : "images/johan.jpg"
+	}, 
+	{
+		"name" : "Rob",
+		"id": "rob",
+		"img" : "images/rob.jpg"
+	}, 
+	{
+		"name" : "Pieter",
+		"id": "pieter",
+		"img" : "images/pieter.jpg"
+	}, 
+	{
+		"name" : "Andre",
+		"id": "andre",
+		"img" : "images/andre.jpg"
+	}, 
+	{
+		"name" : "Jonas",
+		"id": "jonas",
+		"img" : "images/jonas.jpg"
+	}, 
+	{
+		"name" : "Jo",
+		"id": "jo",
+		"img" : "images/jo.jpg"
+	}, 
+	{
+		"name" : "Nick",
+		"id": "nikola",
+		"img" : "images/nikola.jpg"
+	}, 
+	{
+		"name" : "Christof",
+		"id": "christof",
+		"img" : "images/christof.jpg"
+	}
+]
