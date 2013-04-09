@@ -29,7 +29,7 @@ $(document).ready(function() {
   $('[id^="myCarousel"]').carousel({interval: false});
 });
 
-$("#form").submit(function() {
+$("#form").submit(function(event) {
   event.preventDefault();
 
   RTCApp.name = $("#user").val();    
@@ -71,7 +71,7 @@ function remoteCallback(from, added, stream){
       $('.inner').append('<video class="span4" id=' + resource + ' src=' +  
           window.webkitURL.createObjectURL(event.stream) + ' autoplay></video>');
     } else {
-      $('.inner').append('<video class="span4" id=' + resource + ' src=' +  
+      $('.inner').append('<video class="span4" id=' + resource + ' mozSrcObject=' +  
           event.stream + ' autoplay></video>');
     }
   } else {

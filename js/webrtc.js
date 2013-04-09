@@ -82,7 +82,7 @@ var webrtc = function(options) {
             getUserMedia("video,audio", successCallback, errorCallback);
         }
         function successCallback(stream) {
-            sourcevid.src = window.webkitURL.createObjectURL(stream);
+            attachMediaStream(sourcevid, stream);
             localStream = stream;
             logg('local stream started');
         }
