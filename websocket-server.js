@@ -160,8 +160,8 @@ function remove(name){
     console.log('removing '+ name)
     //delete people[name];
     delete connectionDict[name];
-    var index = clientConnections.indexOf(name);
-    clientConnections.splice(index, 1);
+    //var index = clientConnections.indexOf(name);
+    //clientConnections.splice(index, 1);
 }
 
 function sendCallback(err) {
