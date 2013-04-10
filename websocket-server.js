@@ -71,12 +71,16 @@ wsServer.on('request', function(request) {
                 if(rooms[to].indexOf(from) < 0)
                     rooms[to].push(from);
                 return;
-            } else if(to !== undefined && from !== undefined && connectionDict[to] !== undefined){
-                console.log('Sending unicast from ' + from + ":"+ to);
-                connectionDict[to].send(message.utf8Data, function (){
-                    that = this;
-                    sendCallback.call(that);
-                });
+            } else if(to !== undefined && from !== undefined){
+                if(connectionDict[to] !== undefined && people[to] !== 'off'){
+                    console.log('Sending unicast from ' + from + ":"+ to);
+                    connectionDict[to].send(message.utf8Data, function (){
+                        that = this;
+                        sendCallback.call(that);
+                    });
+                } else {
+                    console.log("message couldn't be passed to " + to);
+                }
                 return;
             }
 
