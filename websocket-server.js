@@ -95,13 +95,13 @@ wsServer.on('request', function(request) {
         }
     });
 
-    connection.on('close', function(connection) {
+    connection.on('close', function(conn) {
         console.log('Peer disconnected.'); 
         for(var i = 0; i < clientConnections.length; i++) {
-            if(clientConnections[i] === connection) {
+            if(clientConnections[i] === conn) {
                 clientConnections.splice(i, 1);
-                if(connection.name !== undefined){
-                    sendPresence(connection.name, 'off');
+                if(conn.name !== undefined){
+                    sendPresence(conn.name, 'off');
                 }
                 break;
             }
@@ -133,35 +133,31 @@ function sendPresence(who, live){
     } else {
         for(var _name in people){
             clientConnections.forEach(function (connection) {
-                if(people[_name] ==='off'){
-                    //console.log('Sending off presence '+ _name + ' to ' + connection.name);
+                if(people[_name] === 'off'){
+                    console.log('Sending off presence '+ _name + ' to ' + connection.name);
                     connection.send(JSON.stringify({type: 'presence', name: _name, status: 'off' }), function (){
                     that = this;
                     sendCallback.call(that);
                     });
-                } else {
-                    //console.log('Sending on presence '+ _name + ' to ' + connection.name);
+                } else if(people[_name] === 'on'){
+                    console.log('Sending on presence '+ _name + ' to ' + connection.name);
                     connection.send(JSON.stringify({type: 'presence', name: _name, status: 'on'}), function (){
                     that = this;
                     sendCallback.call(that);
                     });
                 }
             });
-            if(people[_name] === 'off'){
-                remove(_name);
-            }
-
         }
         //console.log('sendPresence finished');
     }
 }
 
 function remove(name){
-    console.log('removing '+ name)
-    //delete people[name];
+    console.log('removing '+ name);
+    people[name] = 'off';
     delete connectionDict[name];
-    //var index = clientConnections.indexOf(name);
-    //clientConnections.splice(index, 1);
+    var index = clientConnections.indexOf(name);
+    clientConnections.splice(index, 1);
 }
 
 function sendCallback(err) {
