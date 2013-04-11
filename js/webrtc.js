@@ -10,7 +10,6 @@ var webrtc = function(options) {
     var peerConn = {};
 
     var mediaConstraints;
-    debugger;
 
     if(options.constrains !== undefined){
         if(options.constrains === 'dynamic'){
