@@ -17,7 +17,8 @@ RTCApp.commChannel.addOfferCallback(accept);
 RTCApp.webRTC = webrtc({sourcevid : document.getElementById('sourceSmallvid'),
   stunServer : "stun.l.google.com:19302",
   commChannel : RTCApp.commChannel,
-  onremote : remoteCallback
+  onremote : remoteCallback,
+  options.constrains = 'dynamic'
 });
     
 RTCApp.webRTC.startVideo();

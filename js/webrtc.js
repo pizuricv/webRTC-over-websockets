@@ -9,6 +9,28 @@ var webrtc = function(options) {
     var localStream;
     var peerConn = {};
 
+    var mediaConstraints;
+    debugger;
+
+    if(options.constrains !== undefined){
+        if(options.constrains === 'dynamic'){
+            BANDWITDH.init();
+            var bandwitdh = BANDWITDH.getResult();
+            if(bandwitdh < 0.5){
+                mediaConstraints = {'mandatory': {
+                            'OfferToReceiveAudio':true, 
+                            'OfferToReceiveVideo':false }};
+            }
+        } else {
+            mediaConstraints = options.constrains;
+        }
+    } else {
+        mediaConstraints = {'mandatory': {
+                            'OfferToReceiveAudio':true, 
+                            'OfferToReceiveVideo':true }};
+
+    }
+
     //callback to start p2p connection between two parties
     commChannel.addAnswerCallback(call);
     commChannel.addMessageCallback(processSignalingMessage);
@@ -68,10 +90,6 @@ var webrtc = function(options) {
     RTCPeer.prototype.getFrom = function(){
         return this.from;
     }
-
-    var mediaConstraints = {'mandatory': {
-                            'OfferToReceiveAudio':true, 
-                            'OfferToReceiveVideo':true }};
    
     var logg = function(s) { console.log(s); };
 
