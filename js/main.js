@@ -147,7 +147,7 @@ function loadFromJSON(file, class_name, class_div, flagUser, new_user){
     var i = 0;
     var groupIndex = 6;
     if(new_user !== undefined){
-      data.push(new_user);
+      data.unshift(new_user);
     }
    
     $.each(data, function() {
@@ -155,7 +155,7 @@ function loadFromJSON(file, class_name, class_div, flagUser, new_user){
       var image = this.img;
       var id = this.id;
       if(flagUser !== undefined && flagUser){
-        users.unshift(id);
+        users.push(id);
       }
          
       if(i % groupIndex === 0){
