@@ -1,4 +1,10 @@
 //http://stackoverflow.com/questions/4583395/calculate-speed-using-javascript
+/*
+  this is only download estimation, obviously, in peer2peer default deployment, you will
+  have full mesh, n*times both upstream and donwstream stream comming to you (which is bad, 
+  but unless you have a server in between this is what it is). Remark: simetrical upstream/downstream
+  is not common in DSL deplyoment, where downstream bandwith is much higher.  
+*/
 var BANDWITDH = (function(){
   var imageAddr;
   var size;

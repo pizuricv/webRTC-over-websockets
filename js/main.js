@@ -18,22 +18,34 @@ RTCApp.webRTC = webrtc({sourcevid : document.getElementById('sourceSmallvid'),
   stunServer : "stun.l.google.com:19302",
   commChannel : RTCApp.commChannel,
   onremote : remoteCallback,
-  options.constrains = 'dynamic'
+  constrains : 'dynamic'
 });
     
 RTCApp.webRTC.startVideo();
 
+var users = [];
+
 $(document).ready(function() {
-  loadFromJSON("data/people.json", "ajax-modal", ".people-carousel");
-  loadFromJSON("data/rooms.json", "ajax-room-modal", ".rooms-carousel");
+  loadFromJSON("data/people.json", "ajax-modal", ".people-carousel", true);
+  loadFromJSON("data/rooms.json", "ajax-room-modal", ".rooms-carousel", false);
   $('#people').fadeIn();
   $('[id^="myCarousel"]').carousel({interval: false});
 });
 
 $("#form").submit(function(event) {
   event.preventDefault();
+  var name = $("#user").val();
+  if(users.indexOf(name) < 0){
+    console.log('user not known by the system, create an avatar');
+    $('.people-carousel').empty();
+    loadFromJSON("data/people.json", "ajax-modal", ".people-carousel", true, {
+      "name" : name,
+      "id": name,
+      "img" : "images/person.jpg"
+    });
+  }
 
-  RTCApp.name = $("#user").val();    
+  RTCApp.name = name;    
   RTCApp.commChannel.sendPresence(RTCApp.name, 'on');
 
   $('#user').attr('readonly', true);
@@ -129,16 +141,22 @@ window.onbeforeunload = function() {
 }
 
 
-function loadFromJSON(file, class_name, class_div){
+function loadFromJSON(file, class_name, class_div, flagUser, new_user){
     $.getJSON(file, function(data) {
     var items = [];
     var i = 0;
     var groupIndex = 6;
+    if(new_user !== undefined){
+      data.push(new_user);
+    }
    
     $.each(data, function() {
-      var room = this.name;
+      var name = this.name;
       var image = this.img;
       var id = this.id;
+      if(flagUser !== undefined && flagUser){
+        users.unshift(id);
+      }
          
       if(i % groupIndex === 0){
         if(i === 0)
@@ -148,7 +166,7 @@ function loadFromJSON(file, class_name, class_div){
         items.push('<ul class="thumbnails">');
       }
       
-      items.push('<li class="span2"><div class="thumbnail"><img src="' + image +' " alt=""></a> <h4>' + room + '</h4><p><a href="#" class="btn btn-primary ' + class_name + ' " user-id="' + id + '" >Talk<img src="images/offline-icon.png" width="24" height="24" align="left" alt=""> </a></p></div></li>');
+      items.push('<li class="span2"><div class="thumbnail"><img src="' + image +' " alt=""></a> <h4>' + name + '</h4><p><a href="#" class="btn btn-primary ' + class_name + ' " user-id="' + id + '" >Talk<img src="images/offline-icon.png" width="24" height="24" align="left" alt=""> </a></p></div></li>');
 
       if( (i % groupIndex) === (groupIndex - 1) ){
         items.push('</ul>');
