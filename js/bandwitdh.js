@@ -22,14 +22,12 @@ var BANDWITDH = (function(){
           downloadSize = size !== undefined ? size : 5616998; 
           startTime = (new Date()).getTime();
           download.src = imageAddr;
-          debugger;
           download.onload = function() {
                endTime = (new Date()).getTime();
          }
       },
       getResult: function(){
           var duration = (endTime - startTime) / 1000;
-          debugger;
           var bitsLoaded = downloadSize * 8;
           var speedBps = (bitsLoaded / duration).toFixed(2);
           var speedKbps = (speedBps / 1024).toFixed(2);

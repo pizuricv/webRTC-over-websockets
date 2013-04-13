@@ -72,7 +72,7 @@
           <div class="thumbnail span2">
             <video id="sourceSmallvid" autoplay></video>
           </div>
-
+          
           <div id="room_content">
             <div class="carousel slide span10" id="myRoomCarousel">
               <div class="carousel-inner rooms-carousel"></div>
@@ -97,14 +97,28 @@
   <div id="acceptModal" class="modal hide fade">
     <div class="modal-header">
       <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-      <h3>Accept the call?</h3>
+      <h3 id="callerTitle"></h3>
     </div>
     <div class="modal-body">
       <p id="caller"></p>
     </div>
     <div class="modal-footer">
       <a id="accept" href="#" class="btn btn-primary">Accept</a>
-      <a id="reject" href="#" class="btn">Reject</a>
+      <a id="reject" href="#" class="btn">Decline</a>
+    </div>
+  </div>
+
+  <div id="userModal" class="modal hide fade">
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+      <h3 id="userTitle"></h3>
+    </div>
+    <div class="modal-body">
+      <p id="callerUser"></p>
+    </div>
+    <div class="modal-footer">
+      <a id="acceptNewUser" href="#" class="btn btn-primary">Accept</a>
+      <a id="rejectNewUser" href="#" class="btn">Decline</a>
     </div>
   </div>
 

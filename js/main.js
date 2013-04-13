@@ -23,7 +23,7 @@ RTCApp.webRTC = webrtc({sourcevid : document.getElementById('sourceSmallvid'),
     
 RTCApp.webRTC.startVideo();
 
-var users = [];
+var users = {};
 
 $(document).ready(function() {
   loadFromJSON("data/people.json", "ajax-modal", ".people-carousel", true);
@@ -35,14 +35,13 @@ $(document).ready(function() {
 $("#form").submit(function(event) {
   event.preventDefault();
   var name = $("#user").val();
-  if(users.indexOf(name) < 0){
+  if(users[name] === undefined){
     console.log('user not known by the system, create an avatar');
-    $('.people-carousel').empty();
-    loadFromJSON("data/people.json", "ajax-modal", ".people-carousel", true, {
+    addNewUser({
       "name" : name,
       "id": name,
       "img" : "images/person.jpg"
-    });
+    }, "ajax-modal", ".people-carousel");
   }
 
   RTCApp.name = name;    
@@ -67,7 +66,8 @@ var snd = new Audio("data/ringtone.wav");
 function accept(from){
   caller = from;
   snd.play();
-  $('#caller').text('You are getting a call request from ' + from);
+  $('#callerTitle').text('Incoming call');
+  $('#caller').text('Caller id '+ from);
   $('#acceptModal').modal('show');
 }
 
@@ -93,19 +93,34 @@ function remoteCallback(from, added, stream){
   }
 }
 
+
+$('#acceptNewUser').bind('click', function() {
+  addNewUser({
+    "name" : caller,
+    "id": caller,
+    "img" : "images/person.jpg"
+  }, "ajax-modal", ".people-carousel");
+  $('#userModal').modal('hide');
+});
+
+$('#rejectNewUser').bind('click', function() {
+  $('#userModal').modal('hide');
+});
+
 function presenceCallback(who, status){
+  var user_id, room;
   $(".ajax-modal").each(function(){
-    var user_id = $(this).attr('user-id'); 
+    user_id = $(this).attr('user-id'); 
     if(user_id !== undefined && user_id === who){
       if(status === 'on'){
         $(this).find('img').attr('src', 'images/online-icon.png');
-      }else {
+      } else {
         $(this).find('img').attr('src', 'images/offline-icon.png');
       }
     }       
   });
   $(".ajax-room-modal").each(function(){
-    var room = $(this).attr('user-id'); 
+    room = $(this).attr('user-id'); 
     if(room !== undefined && room === who){
       if(status === 'on'){
         $(this).find('img').attr('src', 'images/online-icon.png');
@@ -114,6 +129,13 @@ function presenceCallback(who, status){
       }
     }       
   });
+  if(users[who] === undefined){
+    console.log('presence received from the person that is not in the address book ' + who);
+    $('#userTitle').text('Accept a new user?');
+    $('#callerUser').text('Caller id '+ who);
+    caller = who;
+    $('#userModal').modal('show');
+  }
 }
 
 $('#main').delegate('a.ajax-modal', 'click', function() {
@@ -140,47 +162,55 @@ window.onbeforeunload = function() {
     RTCApp.commChannel.sendPresence(RTCApp.name, 'off');
 }
 
+function addNewUser(jsonData, class_name, class_div){
+  users[jsonData.id] = jsonData;
+  $('.people-carousel').empty();
+  var array = $.map(users, function (value, key) { return value; });
+  addDataToDiv(array, class_name, class_div, true);
+}
 
-function loadFromJSON(file, class_name, class_div, flagUser, new_user){
+function loadFromJSON(file, class_name, class_div, update){
     $.getJSON(file, function(data) {
-    var items = [];
-    var i = 0;
-    var groupIndex = 6;
-    if(new_user !== undefined){
-      data.unshift(new_user);
-    }
-   
-    $.each(data, function() {
-      var name = this.name;
-      var image = this.img;
-      var id = this.id;
-      if(flagUser !== undefined && flagUser){
-        users.push(id);
-      }
-         
-      if(i % groupIndex === 0){
-        if(i === 0)
-          items.push('<div class="item active">');
-        else
-          items.push('<div class="item">');
-        items.push('<ul class="thumbnails">');
-      }
-      
-      items.push('<li class="span2"><div class="thumbnail"><img src="' + image +' " alt=""></a> <h4>' + name + '</h4><p><a href="#" class="btn btn-primary ' + class_name + ' " user-id="' + id + '" >Talk<img src="images/offline-icon.png" width="24" height="24" align="left" alt=""> </a></p></div></li>');
+      addDataToDiv(data, class_name, class_div, update);
+  });
+}
 
-      if( (i % groupIndex) === (groupIndex - 1) ){
-        items.push('</ul>');
-        items.push('</div>');
-      }
-      i++;
-    });
+function addDataToDiv(data, class_name, class_div, update){
+  var items = [];
+  var i = 0;
+  var groupIndex = 12;
+
+  $.each(data, function(key, value) {
+    var name = this.name;
+    var image = this.img;
+    var id = this.id;
+    if(update)
+      users[id] = value;
+       
+    if(i % groupIndex === 0){
+      if(i === 0)
+        items.push('<div class="item active">');
+      else
+        items.push('<div class="item">');
+      items.push('<ul class="thumbnails">');
+    }
     
-    if(items.lenght > 0 && items[items.lenght - 1].indexOf('div') < 0 ){
+    items.push('<li class="span1"><div class="thumbnail"><img src="' + image 
+      +' " alt=""></a> <h4>' + name + '</h4><p><a href="#" class="btn btn-primary ' + 
+      class_name + ' " user-id="' + id + 
+      '" >Talk<img src="images/offline-icon.png" width="24" height="24" align="left" alt=""> </a></p></div></li>');
+
+    if( (i % groupIndex) === (groupIndex - 1) ){
       items.push('</ul>');
       items.push('</div>');
     }
-    
-    $(items.join('')).appendTo(class_div);
+    i++;
   });
-
+    
+  if(items.lenght > 0 && items[items.lenght - 1].indexOf('div') < 0 ){
+    items.push('</ul>');
+    items.push('</div>');
+  }
+  
+  $(items.join('')).appendTo(class_div);
 }
