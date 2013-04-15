@@ -24,6 +24,9 @@ RTCApp.webRTC = webrtc({sourcevid : document.getElementById('sourceSmallvid'),
 RTCApp.webRTC.startVideo();
 
 var users = {};
+var caller, newUser;
+var snd = new Audio("data/ringtone.wav");
+var newUsers = {}; 
 
 $(document).ready(function() {
   loadFromJSON("data/people.json", "ajax-modal", ".people-carousel", true);
@@ -51,7 +54,6 @@ $("#form").submit(function(event) {
   $("#submit").hide();
 });
 
-var caller;
 $('#accept').bind('click', function() {
   RTCApp.commChannel.answer(caller, 'accept');
   $('#acceptModal').modal('hide');
@@ -62,7 +64,6 @@ $('#reject').bind('click', function() {
   $('#acceptModal').modal('hide');
 });
 
-var snd = new Audio("data/ringtone.wav"); 
 function accept(from){
   caller = from;
   snd.play();
@@ -95,15 +96,17 @@ function remoteCallback(from, added, stream){
 
 
 $('#acceptNewUser').bind('click', function() {
+  delete newUsers[newUser];
   addNewUser({
-    "name" : caller,
-    "id": caller,
+    "name" : newUser,
+    "id": newUser,
     "img" : "images/person.jpg"
   }, "ajax-modal", ".people-carousel");
   $('#userModal').modal('hide');
 });
 
 $('#rejectNewUser').bind('click', function() {
+  newUsers[newUser] = false;
   $('#userModal').modal('hide');
 });
 
@@ -129,12 +132,11 @@ function presenceCallback(who, status){
       }
     }       
   });
-  if(users[who] === undefined){
+  if(users[who] === undefined && status === 'on'){
     console.log('presence received from the person that is not in the address book ' + who);
-    $('#userTitle').text('Accept a new user?');
-    $('#callerUser').text('Caller id '+ who);
-    caller = who;
-    $('#userModal').modal('show');
+    if(newUsers[who] === undefined){
+      newUsers[who] = true;
+    } 
   }
 }
 
@@ -214,3 +216,15 @@ function addDataToDiv(data, class_name, class_div, update){
   
   $(items.join('')).appendTo(class_div);
 }
+
+
+setInterval(function(){
+  for(newUser in newUsers){
+    if(newUsers[newUser]){
+      $('#userTitle').text('Accept a new user?');
+      $('#callerUser').text('User id '+ newUser);
+      $('#userModal').modal('show');
+      break;
+    }
+  }
+}, 10000);
