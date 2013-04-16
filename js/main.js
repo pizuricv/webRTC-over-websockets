@@ -2,7 +2,6 @@ var socketAddress = 'ws://localhost:1337/';
 
 var RTCApp = {
   name: null,
-  room: null,
   webRTC: null,
   commChannel: null,
   message: null
@@ -29,8 +28,8 @@ var snd = new Audio("data/ringtone.wav");
 var newUsers = {}; 
 
 $(document).ready(function() {
-  loadFromJSON("data/people.json", "ajax-modal", ".people-carousel", true);
-  loadFromJSON("data/rooms.json", "ajax-room-modal", ".rooms-carousel", false);
+  loadFromJSON("data/people.json", "ajax-modal", ".people-carousel");
+  loadFromJSON("data/rooms.json", "ajax-room-modal", ".rooms-carousel");
   $('#people').fadeIn();
   $('[id^="myCarousel"]').carousel({interval: false});
 });
@@ -52,6 +51,11 @@ $("#form").submit(function(event) {
 
   $('#user').attr('readonly', true);
   $("#submit").hide();
+
+  if(users[name].room !== undefined){
+    for(var i=0; i < users[name].room.length; i ++)
+      RTCApp.commChannel.roomOffer(users[name].room[i]);
+  }
 });
 
 $('#accept').bind('click', function() {
@@ -149,8 +153,8 @@ $('#main').delegate('a.ajax-modal', 'click', function() {
 
 $('#main').delegate('a.ajax-room-modal', 'click', function() {
   event.preventDefault();
-  RTCApp.room = $(this).attr('user-id');
-  RTCApp.commChannel.roomOffer(RTCApp.room);
+  var room = $(this).attr('user-id');
+  RTCApp.commChannel.roomOffer(room);
 });
 
 $.ajaxSetup({
@@ -168,16 +172,16 @@ function addNewUser(jsonData, class_name, class_div){
   users[jsonData.id] = jsonData;
   $('.people-carousel').empty();
   var array = $.map(users, function (value, key) { return value; });
-  addDataToDiv(array, class_name, class_div, true);
+  addDataToDiv(array, class_name, class_div);
 }
 
-function loadFromJSON(file, class_name, class_div, update){
+function loadFromJSON(file, class_name, class_div){
     $.getJSON(file, function(data) {
-      addDataToDiv(data, class_name, class_div, update);
+      addDataToDiv(data, class_name, class_div);
   });
 }
 
-function addDataToDiv(data, class_name, class_div, update){
+function addDataToDiv(data, class_name, class_div){
   var items = [];
   var i = 0;
   var groupIndex = 12;
@@ -186,8 +190,7 @@ function addDataToDiv(data, class_name, class_div, update){
     var name = this.name;
     var image = this.img;
     var id = this.id;
-    if(update)
-      users[id] = value;
+    users[id] = value;
        
     if(i % groupIndex === 0){
       if(i === 0)

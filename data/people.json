@@ -2,46 +2,55 @@
 	{
 		"name" : "Veselin",
 		"id": "veselin",
-		"img" : "images/avatar.png"
+		"img" : "images/avatar.png",
+		"room" : ["work", "home", "webrtc"]
 	}, 
 	{
 		"name" : "Johan",
 		"id": "johan",
-		"img" : "images/johan.jpg"
+		"img" : "images/johan.jpg",
+		"room" : ["work"]
 	}, 
 	{
 		"name" : "Rob",
 		"id": "rob",
-		"img" : "images/rob.jpg"
+		"img" : "images/rob.jpg",
+		"room" : ["work"]
 	}, 
 	{
 		"name" : "Pieter",
 		"id": "pieter",
-		"img" : "images/pieter.jpg"
+		"img" : "images/pieter.jpg",
+		"room" : ["work"]
 	}, 
 	{
 		"name" : "Andre",
 		"id": "andre",
-		"img" : "images/andre.jpg"
+		"img" : "images/andre.jpg",
+		"room" : ["webrtc"]
 	}, 
 	{
 		"name" : "Jonas",
 		"id": "jonas",
-		"img" : "images/jonas.jpg"
+		"img" : "images/jonas.jpg",
+		"room" : ["work" , "webrtc"]
 	}, 
 	{
 		"name" : "Jo",
 		"id": "jo",
-		"img" : "images/jo.jpg"
+		"img" : "images/jo.jpg",
+		"room" : ["work"]
 	}, 
 	{
 		"name" : "Nick",
 		"id": "nikola",
-		"img" : "images/nikola.jpg"
+		"img" : "images/nikola.jpg",
+		"room" : ["home"]
 	}, 
 	{
 		"name" : "Christof",
 		"id": "christof",
-		"img" : "images/christof.jpg"
+		"img" : "images/christof.jpg",
+		"room" : ["work"]
 	}
 ]

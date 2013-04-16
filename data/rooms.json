@@ -1,12 +1,17 @@
 [ 
 	{
-		"name" : "Football",
-		"id": "room1",
-		"img" : "images/football.jpg"
+		"name" : "Home",
+		"id": "home",
+		"img" : "images/home.png"
 	}, 
 	{
 		"name" : "webrtc",
-		"id": "room2",
+		"id": "webrtc",
 		"img" : "images/webrtc.jpg"
+	},
+	{
+		"name" : "work",
+		"id": "work",
+		"img" : "images/work.jpg"
 	}
 ]
