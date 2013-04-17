@@ -2,7 +2,7 @@
 	{
 		"name" : "Home",
 		"id": "home",
-		"img" : "images/home.png"
+		"img" : "images/home.jpg"
 	}, 
 	{
 		"name" : "webrtc",

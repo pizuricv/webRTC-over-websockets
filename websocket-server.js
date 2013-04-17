@@ -1,10 +1,10 @@
 var WebSocketServer = require('websocket').server;
 var http = require('http');
-var clientConnections = [];
 var people = {};
 var connectionDict = {};
 var rooms = {};
 var PRESENCE_REFRESH_RATE = 5000;
+var numberOfConnections = 0;
 
 var server = http.createServer(function(request, response) {
     // process HTTP request. Since we're writing just WebSockets serve we don't have to implement anything.
@@ -26,11 +26,11 @@ setInterval(sendPresence, PRESENCE_REFRESH_RATE);
 // Otherwise, it will send the broadcast.
 
 wsServer.on('request', function(request) {
+    numberOfConnections ++;
     console.log('Connection from origin ' + request.origin);
     var connection = request.accept(null, request.origin);
     console.log('Connection address ' + connection.remoteAddress);
-    clientConnections.push(connection);
-    console.log('Number of connections ' + clientConnections.length);
+    console.log('Number of connections ' + numberOfConnections);
 
     connection.on('message', function(message) {
         if (message.type === 'utf8') {
@@ -42,10 +42,18 @@ wsServer.on('request', function(request) {
             var type = msg.type;
             var from = msg.from;
             var to = msg.to;
+            var name;
+
+            //accept only messages that are authorized, in simple case, we assume that the
+            //first call is the presence with a name of the caller
+            if(type !== 'presence' && connection.name === undefined){
+                console.log('connection not allowed, name not provided');
+                return;
+            }
 
             //after presence message, socket connection is 'named', only such connections participate later.
             if(type === 'presence'){
-                var name = msg.name;
+                name = msg.name;
                 var status = msg.status;
                 if(status === 'on'){
                     connection.name = name;
@@ -74,10 +82,8 @@ wsServer.on('request', function(request) {
             } else if(to !== undefined && from !== undefined){
                 if(connectionDict[to] !== undefined && people[to] !== 'off'){
                     console.log('Sending unicast from ' + from + ":"+ to);
-                    connectionDict[to].send(message.utf8Data, function (){
-                        that = this;
-                        sendCallback.call(that);
-                    });
+                    connectionDict[to].send(message.utf8Data, sendCallback);
+                    }
                 } else {
                     console.log("message couldn't be passed to " + to);
                 }
@@ -86,39 +92,25 @@ wsServer.on('request', function(request) {
 
             console.log('Sending broadcast from '+ from);
 
-            // broadcast message to all connected clientConnections that have name attached
-            clientConnections.forEach(function (outputConnection) {
-                if (outputConnection !== connection && outputConnection.name !== undefined) {
-                    console.log('Sending data to '+ outputConnection.name);
-                    outputConnection.send(message.utf8Data, function (){
-                    that = this;
-                    sendCallback.call(that);
-                    });
+            // broadcast message to all clients that have name attached
+            for(var client in connectionDict){
+                if(client !== name){
+                    console.log('Sending data to '+ client);
+                    connectionDict[client].send(message.utf8Data, sendCallback);
                 }
-            });
-        }
-    });
+            }
+        });
 
     connection.on('close', function(conn) {
         console.log('Peer disconnected.'); 
-        for(var i = 0; i < clientConnections.length; i++) {
-            if(clientConnections[i] === conn) {
-                clientConnections.splice(i, 1);
-                if(conn.name !== undefined){
-                    sendPresence(conn.name, 'off');
-                }
-                break;
-            }
-        }
+        numberOfConnections --;
+        remove(connection.name);
     });
 });
 
 
 function sendOffer(connection, _from, _to){
-    connection.send(JSON.stringify({type: 's-offer', from: _from, to: _to}), function (){
-        that = this;
-        sendCallback.call(that);
-        });
+    connection.send(JSON.stringify({type: 's-offer', from: _from, to: _to}), sendCallback);
 
 }
 
@@ -126,55 +118,36 @@ function sendPresence(who, live){
     //console.log('sendind presence...');
     if(who !== undefined && live !== undefined){
         people[who] = live;
-        clientConnections.forEach(function (connection) {
-        if(connection.name !== undefined){
-            connection.send(JSON.stringify({type: 'presence', name: who, status: live}), function (){
-                that = this;
-                sendCallback.call(that);
-                });
-            }
-        });
+        for(var client in connectionDict){       
+            connectionDict[client].send(JSON.stringify({type: 'presence', name: who, status: live}), sendCallback);
+        }
     } else {
         for(var _name in people){
-            clientConnections.forEach(function (connection) {
+            for(var client in connectionDict){ 
                 if(people[_name] === 'off'){
-                    console.log('Sending off presence '+ _name + ' to ' + connection.name);
-                    connection.send(JSON.stringify({type: 'presence', name: _name, status: 'off' }), function (){
-                    that = this;
-                    sendCallback.call(that);
-                    });
+                    console.log('Sending off presence '+ _name + ' to ' + client);
+                    connectionDict[client].send(JSON.stringify({type: 'presence', name: _name, status: 'off' }), sendCallback);
                 } else if(people[_name] === 'on'){
-                    console.log('Sending on presence '+ _name + ' to ' + connection.name);
-                    connection.send(JSON.stringify({type: 'presence', name: _name, status: 'on'}), function (){
-                    that = this;
-                    sendCallback.call(that);
-                    });
+                    console.log('Sending on presence '+ _name + ' to ' + client);
+                    connectionDict[client].send(JSON.stringify({type: 'presence', name: _name, status: 'on'}), sendCallback);
                 }
-            });
+            }
         }
         //console.log('sendPresence finished');
     }
 }
 
 function remove(name){
-    console.log('removing '+ name);
-    people[name] = 'off';
-    delete connectionDict[name];
-    var index = clientConnections.indexOf(name);
-    clientConnections.splice(index, 1);
+    if(name !== undefined && name !== null){
+        console.log('removing '+ name);
+        people[name] = 'off';
+        delete connectionDict[name];
+    }
 }
 
 function sendCallback(err) {
     if (err){
         console.error("send() error: " + err);
-        if(err === "Connection closed"){
-            for(var i = 0; i < clientConnections.length; i++) {
-                if(clientConnections[i] === this) {
-                    clientConnections.splice(i, 1);
-                    break;
-                }
-            }
-        }
     }   
 }
 
