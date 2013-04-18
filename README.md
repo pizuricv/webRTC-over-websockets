@@ -30,6 +30,8 @@ Files
 After this you can run the server with:
 $ node server.js [settings.json]
 
+- `index.html` portal page (see settings below)
+
 #### Settings
 Defined in settings.json, in case you don't provide it:
 - refreshRate [default 5s], refresh presence rate to all connected users
@@ -37,8 +39,7 @@ Defined in settings.json, in case you don't provide it:
 - acceptNewUsers [default false], whether to accept users that are not defined in people.json file
 
 
-Things to change if you install the app on your server
--------
+Things to change if you install the app on your server:
 - in `js/main.js` change the websocket address to point to your server
 - change json files `data/people.json` and `data/rooms.json` with your address book
 - change images

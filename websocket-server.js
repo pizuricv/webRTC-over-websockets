@@ -8,6 +8,7 @@ var rooms = {};
 var numberOfConnections = 0;
 
 var settings = {
+    websocketPort: 1337,
     refreshRate : 5000,
     autoCall : true,
     acceptNewUsers : false
@@ -25,6 +26,7 @@ fs.readFile(process.argv[2] || './settings.json', function(err, data) {
 fs.readFile('data/people.json', 'utf8', function (err, data) {
   if (err) throw err;
   var obj = JSON.parse(data.toString('utf8', 0, data.length));
+  console.log('Loading people.json file');
   for(var i=0; i< obj.length; i ++){
     people[obj[i].id] = 'off';
     console.log('loaded ' + obj[i].id);
@@ -33,10 +35,8 @@ fs.readFile('data/people.json', 'utf8', function (err, data) {
 
 var server = http.createServer(function(request, response) {
     // process HTTP request. Since we're writing just WebSockets serve we don't have to implement anything.
-});
-
-server.listen(1337, function() {
-    console.log('Server is listening on port 1337');
+}).listen(settings.websocketPort, function() {
+    console.log('Socket server is listening on port ' + settings.websocketPort);
 });
 
 wsServer = new WebSocketServer({
