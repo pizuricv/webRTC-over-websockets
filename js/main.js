@@ -28,8 +28,8 @@ var snd = new Audio("data/ringtone.wav");
 var newUsers = {}; 
 
 $(document).ready(function() {
-  loadFromJSON("data/people.json", "ajax-modal", ".people-carousel");
-  loadFromJSON("data/rooms.json", "ajax-room-modal", ".rooms-carousel");
+  loadFromJSON("data/people.json", "ajax-modal", ".people-carousel", false);
+  loadFromJSON("data/rooms.json", "ajax-room-modal", ".rooms-carousel", true);
   $('#people').fadeIn();
   $('[id^="myCarousel"]').carousel({interval: false});
 });
@@ -114,33 +114,37 @@ $('#rejectNewUser').bind('click', function() {
   $('#userModal').modal('hide');
 });
 
-function presenceCallback(who, status){
-  var user_id, room;
-  $(".ajax-modal").each(function(){
-    user_id = $(this).attr('user-id'); 
-    if(user_id !== undefined && user_id === who){
-      if(status === 'on'){
-        $(this).find('img').attr('src', 'images/online-icon.png');
-      } else {
-        $(this).find('img').attr('src', 'images/offline-icon.png');
-      }
-    }       
-  });
-  $(".ajax-room-modal").each(function(){
-    room = $(this).attr('user-id'); 
-    if(room !== undefined && room === who){
-      if(status === 'on'){
-        $(this).find('img').attr('src', 'images/online-icon.png');
-      }else {
-        $(this).find('img').attr('src', 'images/offline-icon.png');
-      }
-    }       
-  });
-  if(users[who] === undefined && status === 'on'){
-    console.log('presence received from the person that is not in the address book ' + who);
-    if(newUsers[who] === undefined){
-      newUsers[who] = true;
-    } 
+function presenceCallback(who, status, roomFlag){
+  var user_id, room_id;
+  if(!roomFlag){
+      $(".ajax-modal").each(function(){
+      user_id = $(this).attr('user-id'); 
+      if(user_id !== undefined && user_id === who){
+        if(status === 'on'){
+          $(this).find('img').attr('src', 'images/online-icon.png');
+        } else {
+          $(this).find('img').attr('src', 'images/offline-icon.png');
+        }
+      }       
+    });
+    if(users[who] === undefined && status === 'on'){
+      console.log('presence received from the person that is not in the address book ' + who);
+      if(newUsers[who] === undefined){
+        newUsers[who] = true;
+      } 
+    }
+  }
+  else{
+      $(".ajax-room-modal").each(function(){
+        room_id = $(this).attr('user-id'); 
+        if(room_id !== undefined && room_id === who){
+          if(status === 'on'){
+            $(this).find('img').attr('src', 'images/online-icon.png');
+          }else {
+            $(this).find('img').attr('src', 'images/offline-icon.png');
+          }
+        }       
+      });
   }
 }
 
@@ -172,16 +176,16 @@ function addNewUser(jsonData, class_name, class_div){
   users[jsonData.id] = jsonData;
   $('.people-carousel').empty();
   var array = $.map(users, function (value, key) { return value; });
-  addDataToDiv(array, class_name, class_div);
+  addDataToDiv(array, class_name, class_div, false);
 }
 
-function loadFromJSON(file, class_name, class_div){
+function loadFromJSON(file, class_name, class_div, roomFlag){
     $.getJSON(file, function(data) {
-      addDataToDiv(data, class_name, class_div);
+      addDataToDiv(data, class_name, class_div, roomFlag);
   });
 }
 
-function addDataToDiv(data, class_name, class_div){
+function addDataToDiv(data, class_name, class_div, roomFlag){
   var items = [];
   var i = 0;
   var groupIndex = 12;
@@ -190,7 +194,8 @@ function addDataToDiv(data, class_name, class_div){
     var name = this.name;
     var image = this.img;
     var id = this.id;
-    users[id] = value;
+    if(!roomFlag)
+      users[id] = value;
        
     if(i % groupIndex === 0){
       if(i === 0)

@@ -83,7 +83,7 @@ var signaling = function(options){
             	answerCallback(msg.from, msg.answer);
         } else if (msg.type === 'presence') {
             logg('presence from: '+ msg.name);
-            presenceCallback(msg.name, msg.status);
+            presenceCallback(msg.name, msg.status, msg.room !== undefined);
         } else {
         	if(messageCallback !== undefined) 
         		messageCallback(message, msg.from);
