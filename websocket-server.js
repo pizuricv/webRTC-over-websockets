@@ -64,11 +64,10 @@ wsServer.on('request', function(request) {
                     remove(name);
                 }
             } else if(type === 'room'){
-                sendPresence(to, 'on');
-                console.log('Sending multicast from ' + from + ": to room "+ to);
                 if(rooms[to] === undefined)
                     rooms[to] = [];
                 console.log('Number of people in the room ' + rooms[to].length);
+                console.log('Sending multicast from ' + from + ": to room "+ to);
                 for(var i = 0; i < rooms[to].length; i ++){
                     var x = rooms[to][i];
                     if(connectionDict[x] !== undefined){
@@ -114,27 +113,30 @@ function sendOffer(connection, _from, _to){
 
 }
 
-function sendPresence(who, live){
+function sendPresence(){
     //console.log('sendind presence...');
-    if(who !== undefined && live !== undefined){
-        people[who] = live;
-        for(var client in connectionDict){       
-            connectionDict[client].send(JSON.stringify({type: 'presence', name: who, status: live}), sendCallback);
-        }
-    } else {
-        for(var _name in people){
-            for(var client in connectionDict){ 
-                if(people[_name] === 'off'){
-                    console.log('Sending off presence '+ _name + ' to ' + client);
-                    connectionDict[client].send(JSON.stringify({type: 'presence', name: _name, status: 'off' }), sendCallback);
-                } else if(people[_name] === 'on'){
-                    console.log('Sending on presence '+ _name + ' to ' + client);
-                    connectionDict[client].send(JSON.stringify({type: 'presence', name: _name, status: 'on'}), sendCallback);
-                }
+    for(var _name in people){
+        for(var client in connectionDict){ 
+            if(people[_name] === 'off'){
+                console.log('Sending off presence '+ _name + ' to ' + client);
+                connectionDict[client].send(JSON.stringify({type: 'presence', name: _name, status: 'off'}), sendCallback);
+            } else if(people[_name] === 'on'){
+                console.log('Sending on presence '+ _name + ' to ' + client);
+                connectionDict[client].send(JSON.stringify({type: 'presence', name: _name, status: 'on'}), sendCallback);
             }
         }
-        //console.log('sendPresence finished');
     }
+    for(var room in rooms){
+        for(var i = 0; i < rooms[room].length; i ++){
+            var client = rooms[room][i];
+            if(connectionDict[client] !== undefined){
+                console.log('Sending on presence of room '+ room + ' to ' + client);
+                connectionDict[client].send(JSON.stringify({type: 'presence', name: room, 
+                    status: 'on', room: true}), sendCallback);
+            }
+        }
+    }
+    //console.log('sendPresence finished');
 }
 
 function remove(name){
