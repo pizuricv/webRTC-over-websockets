@@ -1,10 +1,35 @@
 var WebSocketServer = require('websocket').server;
 var http = require('http');
+var fs = require('fs');
+
 var people = {};
 var connectionDict = {};
 var rooms = {};
-var PRESENCE_REFRESH_RATE = 5000;
 var numberOfConnections = 0;
+
+var settings = {
+    refreshRate : 5000,
+    autoCall : true,
+    acceptNewUsers : false
+}
+
+fs.readFile(process.argv[2] || './settings.json', function(err, data) {
+    if (err) {
+        console.log('No settings.json found ('+err+'). Using default settings');
+    } else {
+        settings = JSON.parse(data.toString('utf8', 0, data.length));
+    }
+    console.log(settings);
+});
+
+fs.readFile('data/people.json', 'utf8', function (err, data) {
+  if (err) throw err;
+  var obj = JSON.parse(data.toString('utf8', 0, data.length));
+  for(var i=0; i< obj.length; i ++){
+    people[obj[i].id] = 'off';
+    console.log('loaded ' + obj[i].id);
+  }
+});
 
 var server = http.createServer(function(request, response) {
     // process HTTP request. Since we're writing just WebSockets serve we don't have to implement anything.
@@ -18,7 +43,7 @@ wsServer = new WebSocketServer({
     httpServer: server
 });
 
-setInterval(sendPresence, PRESENCE_REFRESH_RATE);
+setInterval(sendPresence, settings.refreshRate);
 
 // This callback function is called every time someone tries to connect to the WebSocket server
 // if the type of message is presence, it will send the broadcast. If the type is room, it will send the offer type as multicast, 
@@ -54,6 +79,10 @@ wsServer.on('request', function(request) {
             //after presence message, socket connection is 'named', only such connections participate later.
             if(type === 'presence'){
                 name = msg.name;
+                if(people[name] === undefined && !settings.acceptNewUsers){
+                    console.log('Unknown user not allowed');
+                    return;
+                }
                 var status = msg.status;
                 if(status === 'on'){
                     connection.name = name;
@@ -68,11 +97,13 @@ wsServer.on('request', function(request) {
                     rooms[to] = [];
                 console.log('Number of people in the room ' + rooms[to].length);
                 console.log('Sending multicast from ' + from + ": to room "+ to);
-                for(var i = 0; i < rooms[to].length; i ++){
-                    var x = rooms[to][i];
-                    if(connectionDict[x] !== undefined){
-                        console.log('Sending offer from ' + from + ": to "+ x);
-                        sendOffer(connectionDict[x], from, x);
+                if(settings.autoCall){
+                    for(var i = 0; i < rooms[to].length; i ++){
+                        var x = rooms[to][i];
+                        if(connectionDict[x] !== undefined){
+                            console.log('Sending offer from ' + from + ": to "+ x);
+                            sendOffer(connectionDict[x], from, x);
+                        }
                     }
                 }
                 if(rooms[to].indexOf(from) < 0)

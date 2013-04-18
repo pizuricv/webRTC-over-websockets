@@ -25,9 +25,23 @@ Files
 
 ### Server
 - `websocket-server.js` this is the websocket server, used by node.js. It requires websocket library, you can install it using the following command : 
-```sh
-$ npm install websocket
-```
+- $ npm install websocket
+
+After this you can run the server with:
+$ node server.js [settings.json]
+
+#### Settings
+Defined in settings.json, in case you don't provide it:
+- refreshRate [default 5s], refresh presence rate to all connected users
+- autoCall [default true], whether to call all people in the room as soon as you connect to it
+- acceptNewUsers [default false], whether to accept users that are not defined in people.json file
+
+
+Things to change if you install the app on your server
+-------
+- in `js/main.js` change the websocket address to point to your server
+- change json files `data/people.json` and `data/rooms.json` with your address book
+- change images
 
 
 

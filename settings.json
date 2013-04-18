@@ -1,0 +1,5 @@
+{
+    "refreshRate" : 5000,
+    "autoCall" : true,
+    "acceptNewUsers" : true
+}
