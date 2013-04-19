@@ -31,8 +31,12 @@ var webrtc = function(options) {
     }
 
     //callback to start p2p connection between two parties
-    commChannel.addAnswerCallback(call);
-    commChannel.addMessageCallback(processSignalingMessage);
+    commChannel.addCallback('s-answer', call);
+    
+    commChannel.addCallback('offer', processSignalingMessage);
+    commChannel.addCallback('answer', processSignalingMessage);
+    commChannel.addCallback('candidate', processSignalingMessage);
+    commChannel.addCallback('bye', processSignalingMessage);
 
     function RTCPeer(pc_config, name) {
         this.from = name;
@@ -118,10 +122,15 @@ var webrtc = function(options) {
     }
 
     // start the connection upon user request
-    function call(from, answer) {
-        if (peerConn[from] === undefined && localStream) {
-            logg("Creating PeerConnection with "+from);
-            createPeerConnection(from);
+    function call(msg) {
+        if(msg.answer !== 'accept') {
+            console.log('call not accepted');
+            return;
+        }
+
+        if (peerConn[msg.from] === undefined && localStream) {
+            logg("Creating PeerConnection with "+ msg.from);
+            createPeerConnection(msg.from);
         } else if (!localStream){
             alert("Please start the video first");
             logg("localStream not started");
@@ -130,7 +139,7 @@ var webrtc = function(options) {
             logg("peer SDP offer already made");
         }
         logg("create offer");
-        peerConn[from].createOffer(setLocalDescriptionAndMessage);
+        peerConn[msg.from].createOffer(setLocalDescriptionAndMessage);
     }
 
 
@@ -151,31 +160,30 @@ var webrtc = function(options) {
     }
 
  
-    function processSignalingMessage(message, from) {
-        var msg = JSON.parse(message);
-        logg("processSignalingMessage type(" + msg.type + ")= " + message);
+    function processSignalingMessage(msg) {
+        logg("processSignalingMessage type(" + msg.type + ")= " + msg);
        
         if (msg.type === 'offer') {
-            if(peerConn[from] === undefined && localStream) {                   
-                createPeerConnection(from);
+            if(peerConn[msg.from] === undefined && localStream) {                   
+                createPeerConnection(msg.from);
                 //set remote description
-                peerConn[from].getRTC().setRemoteDescription(new RTCSessionDescription(msg));
+                peerConn[msg.from].getRTC().setRemoteDescription(new RTCSessionDescription(msg));
                 //create answer
                 logg("Sending answer to peer.");
-                peerConn[from].createAnswer(setLocalDescriptionAndMessage);                
+                peerConn[msg.from].createAnswer(setLocalDescriptionAndMessage);                
             } else {
                 logg('peerConnection has already been started');
             }         
-        } else if (msg.type === 'answer' && peerConn[from] !== undefined) {
+        } else if (msg.type === 'answer' && peerConn[msg.from] !== undefined) {
             logg("setRemoteDescription...");
-            peerConn[from].getRTC().setRemoteDescription(new RTCSessionDescription(msg));
-        } else if (msg.type === 'candidate' && peerConn[from] !== undefined) {
+            peerConn[msg.from].getRTC().setRemoteDescription(new RTCSessionDescription(msg));
+        } else if (msg.type === 'candidate' && peerConn[msg.from] !== undefined) {
             var candidate = new RTCIceCandidate({sdpMLineIndex:msg.label, candidate:msg.candidate});
-            peerConn[from].getRTC().addIceCandidate(candidate);
-        } else if (msg.type === 'bye' && peerConn[from] !== undefined) {
-            onRemoteHangUp(from);  
+            peerConn[msg.from].getRTC().addIceCandidate(candidate);
+        } else if (msg.type === 'bye' && peerConn[msg.from] !== undefined) {
+            onRemoteHangUp(msg.from);  
         } else {
-            logg("message unknown:" + message);
+            logg("message unknown:" + msg);
         } 
     }
 

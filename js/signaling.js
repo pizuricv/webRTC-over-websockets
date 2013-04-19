@@ -6,23 +6,17 @@ var signaling = function(options){
 	var myId = options.id;
 
 	var that = {};
-	var offerCallback, answerCallback, presenceCallback, messageCallback;
+    var callbacks = {};
 
-	that.addPresenceCallback = function(f){
-		presenceCallback = f;
-	};
+    function getCallback(type){
+        return callbacks[type] !== undefined ? callbacks[type] : function(){
+            console.log("Callback of type " + type + " not found");
+        };
+    }
 
-	that.addMessageCallback = function(f){
-		messageCallback = f;
-	};
-
-	that.addOfferCallback = function(f){
-		offerCallback = f;
-	};
-
-	that.addAnswerCallback = function(f){
-		answerCallback = f;
-	};
+    that.addCallback = function(type, f){
+        callbacks[type] = f;
+    }    
 
 	that.sendMessage = function(message, to) {
         sendMsg(message, to);
@@ -34,11 +28,11 @@ var signaling = function(options){
         sendMsg({type: 'presence', name: _name, status: _status});
     }
 
-    that.roomOffer = function(room){
+    that.joinRoom = function(room){
         sendMsg({type: 'room'}, room);
     }
 
-	that.offer = function(to){
+	that.callOtherParty = function(to){
 		sendMsg({type: 's-offer'}, to);
 	};
 
@@ -73,21 +67,7 @@ var signaling = function(options){
     function processSignalingMessage(message) {
         var msg = JSON.parse(message);
         logg("processSignalingMessage type(" + msg.type + ")= " + message);
-       
-        if (msg.type === 's-offer' && msg.from !== myId) {
-        	logg('offer recevied from ', msg.from);
-        	offerCallback(msg.from);
-        } else if (msg.type === 's-answer' && msg.from !== myId) {
-            logg('answer recevied from ' +  msg.from + '['+ msg.answer + ']');
-            if(msg.answer === 'accept')
-            	answerCallback(msg.from, msg.answer);
-        } else if (msg.type === 'presence') {
-            logg('presence from: '+ msg.name);
-            presenceCallback(msg.name, msg.status, msg.room !== undefined);
-        } else {
-        	if(messageCallback !== undefined) 
-        		messageCallback(message, msg.from);
-        }
+        getCallback(msg.type)(msg);
     }
 
     return that;

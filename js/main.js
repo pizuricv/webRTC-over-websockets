@@ -9,8 +9,9 @@ var RTCApp = {
 
 RTCApp.commChannel = signaling({webSocketAddress : socketAddress, id: RTCApp.name });
 
-RTCApp.commChannel.addPresenceCallback(presenceCallback);
-RTCApp.commChannel.addOfferCallback(accept);
+RTCApp.commChannel.addCallback('presence' , presenceCallback);
+RTCApp.commChannel.addCallback('s-offer', accept);
+RTCApp.commChannel.addCallback('roster', roster);
 
 
 RTCApp.webRTC = webrtc({sourcevid : document.getElementById('sourceSmallvid'),
@@ -28,34 +29,21 @@ var snd = new Audio("data/ringtone.wav");
 var newUsers = {}; 
 
 $(document).ready(function() {
-  loadFromJSON("data/people.json", "ajax-modal", ".people-carousel", false);
-  loadFromJSON("data/rooms.json", "ajax-room-modal", ".rooms-carousel", true);
+  //loadFromJSON("data/people.json", "ajax-modal", ".people-carousel", false);
+  //loadFromJSON("data/rooms.json", "ajax-room-modal", ".rooms-carousel", true);
+  $('#people_content').hide();
+  $('#room_content').hide();
   $('#people').fadeIn();
   $('[id^="myCarousel"]').carousel({interval: false});
 });
 
 $("#form").submit(function(event) {
   event.preventDefault();
-  var name = $("#user").val();
-  if(users[name] === undefined){
-    console.log('user not known by the system, create an avatar');
-    addNewUser({
-      "name" : name,
-      "id": name,
-      "img" : "images/person.jpg"
-    }, "ajax-modal", ".people-carousel");
-  }
-
-  RTCApp.name = name;    
+  RTCApp.name = $("#user").val();    
   RTCApp.commChannel.sendPresence(RTCApp.name, 'on');
 
   $('#user').attr('readonly', true);
   $("#submit").hide();
-
-  if(users[name].room !== undefined){
-    for(var i=0; i < users[name].room.length; i ++)
-      RTCApp.commChannel.roomOffer(users[name].room[i]);
-  }
 });
 
 $('#accept').bind('click', function() {
@@ -68,11 +56,15 @@ $('#reject').bind('click', function() {
   $('#acceptModal').modal('hide');
 });
 
-function accept(from){
-  caller = from;
+function accept(message){
+  if(message.from === RTCApp.name){
+    console.log("can't call yourself ");
+    return;
+  }
+  caller = message.from;
   snd.play();
   $('#callerTitle').text('Incoming call');
-  $('#caller').text('Caller id '+ from);
+  $('#caller').text('Caller id '+ message.from);
   $('#acceptModal').modal('show');
 }
 
@@ -114,31 +106,32 @@ $('#rejectNewUser').bind('click', function() {
   $('#userModal').modal('hide');
 });
 
-function presenceCallback(who, status, roomFlag){
+function presenceCallback(message){
+  roomFlag = message.room !== undefined;
   var user_id, room_id;
   if(!roomFlag){
       $(".ajax-modal").each(function(){
       user_id = $(this).attr('user-id'); 
-      if(user_id !== undefined && user_id === who){
-        if(status === 'on'){
+      if(user_id !== undefined && user_id === message.name){
+        if(message.status === 'on'){
           $(this).find('img').attr('src', 'images/online-icon.png');
         } else {
           $(this).find('img').attr('src', 'images/offline-icon.png');
         }
       }       
     });
-    if(users[who] === undefined && status === 'on'){
-      console.log('presence received from the person that is not in the address book ' + who);
-      if(newUsers[who] === undefined){
-        newUsers[who] = true;
+    if(users[message.name] === undefined && message.status === 'on'){
+      console.log('presence received from the person that is not in the address book ' + message.name);
+      if(newUsers[message.name] === undefined){
+        newUsers[message.name] = true;
       } 
     }
   }
   else{
       $(".ajax-room-modal").each(function(){
         room_id = $(this).attr('user-id'); 
-        if(room_id !== undefined && room_id === who){
-          if(status === 'on'){
+        if(room_id !== undefined && room_id === message.name){
+          if(message.status === 'on'){
             $(this).find('img').attr('src', 'images/online-icon.png');
           }else {
             $(this).find('img').attr('src', 'images/offline-icon.png');
@@ -152,13 +145,13 @@ $('#main').delegate('a.ajax-modal', 'click', function() {
   event.preventDefault();
   var user_id = $(this).attr('user-id');
   if(user_id !== undefined && user_id !== RTCApp.name) 
-    RTCApp.commChannel.offer(user_id);
+    RTCApp.commChannel.callOtherParty(user_id);
 });
 
 $('#main').delegate('a.ajax-room-modal', 'click', function() {
   event.preventDefault();
   var room = $(this).attr('user-id');
-  RTCApp.commChannel.roomOffer(room);
+  RTCApp.commChannel.joinRoom(room);
 });
 
 $.ajaxSetup({
@@ -183,6 +176,29 @@ function loadFromJSON(file, class_name, class_div, roomFlag){
     $.getJSON(file, function(data) {
       addDataToDiv(data, class_name, class_div, roomFlag);
   });
+}
+
+function roster(message){
+  addDataToDiv(message.people, "ajax-modal", ".people-carousel", false);
+  addDataToDiv(message.rooms, "ajax-room-modal", ".rooms-carousel", true);
+
+  if(message.people.length > 0)
+    $('#people_content').show();
+  if(message.rooms.length > 0)
+    $('#room_content').show();
+
+  if(users[RTCApp.name] === undefined){
+    console.log('user not known by the system, create an avatar');
+    addNewUser({
+      "name" : RTCApp.name,
+      "id": RTCApp.name,
+      "img" : "images/person.jpg"
+    }, "ajax-modal", ".people-carousel");
+  }
+  if(users[RTCApp.name].room !== undefined){
+    for(var i=0; i < users[RTCApp.name].room.length; i ++)
+      RTCApp.commChannel.joinRoom(users[RTCApp.name].room[i]);
+  }
 }
 
 function addDataToDiv(data, class_name, class_div, roomFlag){

@@ -2,5 +2,6 @@
     "websocketPort" : 1337,
     "refreshRate" : 5000,
     "autoCall" : true,
-    "acceptNewUsers" : true
+    "acceptNewUsers" : true,
+    "sendRoster" : true
 }

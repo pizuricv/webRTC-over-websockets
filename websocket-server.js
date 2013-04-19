@@ -6,6 +6,7 @@ var people = {};
 var connectionDict = {};
 var rooms = {};
 var numberOfConnections = 0;
+var roster = {};
 
 var settings = {
     websocketPort: 1337,
@@ -26,11 +27,18 @@ fs.readFile(process.argv[2] || './settings.json', function(err, data) {
 fs.readFile('data/people.json', 'utf8', function (err, data) {
   if (err) throw err;
   var obj = JSON.parse(data.toString('utf8', 0, data.length));
-  console.log('Loading people.json file');
+  roster.people = obj;
   for(var i=0; i< obj.length; i ++){
     people[obj[i].id] = 'off';
-    console.log('loaded ' + obj[i].id);
-  }
+  };
+  console.log('Loaded ' + obj.length + ' people from people.json file');
+});
+
+fs.readFile('data/rooms.json', 'utf8', function (err, data) {
+  if (err) throw err;
+  var obj = JSON.parse(data.toString('utf8', 0, data.length));
+  roster.rooms = obj;
+    console.log('Loaded ' + obj.length + ' rooms from rooms.json file');
 });
 
 var server = http.createServer(function(request, response) {
@@ -87,8 +95,11 @@ wsServer.on('request', function(request) {
                 if(status === 'on'){
                     connection.name = name;
                     connectionDict[name] = connection;
-                    console.log('adding '+name)
+                    console.log('adding '+ name)
                     people[name] = 'on';
+                    if(settings.sendRoster){
+                        connection.send(JSON.stringify({type: "roster", people: roster.people, rooms: roster.rooms}));
+                    }
                 } else {
                     remove(name);
                 }
@@ -145,14 +156,13 @@ function sendOffer(connection, _from, _to){
 }
 
 function sendPresence(){
-    //console.log('sendind presence...');
     for(var _name in people){
         for(var client in connectionDict){ 
             if(people[_name] === 'off'){
-                console.log('Sending off presence '+ _name + ' to ' + client);
+                console.log('Person '+ _name + '[off] -> ' + client);
                 connectionDict[client].send(JSON.stringify({type: 'presence', name: _name, status: 'off'}), sendCallback);
             } else if(people[_name] === 'on'){
-                console.log('Sending on presence '+ _name + ' to ' + client);
+                console.log('Person '+ _name + '[on] -> ' + client);
                 connectionDict[client].send(JSON.stringify({type: 'presence', name: _name, status: 'on'}), sendCallback);
             }
         }
@@ -161,13 +171,12 @@ function sendPresence(){
         for(var i = 0; i < rooms[room].length; i ++){
             var client = rooms[room][i];
             if(connectionDict[client] !== undefined){
-                console.log('Sending on presence of room '+ room + ' to ' + client);
+                console.log('Room '+ room + ' -> ' + client);
                 connectionDict[client].send(JSON.stringify({type: 'presence', name: room, 
                     status: 'on', room: true}), sendCallback);
             }
         }
     }
-    //console.log('sendPresence finished');
 }
 
 function remove(name){
