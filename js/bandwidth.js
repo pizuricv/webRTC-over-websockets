@@ -17,22 +17,20 @@ var BANDWITDH = (function(){
         don't forget to change the address every time you make a request to avoid browser caching.
         For a demo, I will be using the same as in the stackoverflow example
       */
-      init: function(address, size){
+      init: function(callback, address, size){
           imageAddr = address !== undefined ? address : "http://www.tranquilmusic.ca/images/cats/Cat2.JPG" + "?n=" + Math.random(); 
           downloadSize = size !== undefined ? size : 5616998; 
           startTime = (new Date()).getTime();
           download.src = imageAddr;
           download.onload = function() {
-               endTime = (new Date()).getTime();
+            endTime = (new Date()).getTime();
+            var duration = (endTime - startTime) / 1000;
+            var bitsLoaded = downloadSize * 8;
+            var speedBps = (bitsLoaded / duration).toFixed(2);
+            var speedKbps = (speedBps / 1024).toFixed(2);
+            var speedMbps = (speedKbps / 1024).toFixed(2);
+            callback(speedMbps);
          }
       },
-      getResult: function(){
-          var duration = (endTime - startTime) / 1000;
-          var bitsLoaded = downloadSize * 8;
-          var speedBps = (bitsLoaded / duration).toFixed(2);
-          var speedKbps = (speedBps / 1024).toFixed(2);
-          var speedMbps = (speedKbps / 1024).toFixed(2);
-          return speedMbps;
-      }
     } 
 })();

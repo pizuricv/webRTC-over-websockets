@@ -9,30 +9,24 @@ var webrtc = function(options) {
     var localStream;
     var peerConn = {};
 
-    var mediaConstraints;
+    var mediaConstraints = {'mandatory': {'OfferToReceiveAudio':true, 'OfferToReceiveVideo':true }};
 
-    if(options.constrains !== undefined){
-        if(options.constrains === 'dynamic'){
-            BANDWITDH.init();
-            var bandwitdh = BANDWITDH.getResult();
-            if(bandwitdh < 0.5){
-                mediaConstraints = {'mandatory': {
+    if(options.constrains === 'dynamic'){
+        BANDWITDH.init(function(bandwitdh){
+            console.log('calculate bandwitdh');
+            if(!isNaN(bandwitdh) && bandwitdh < 0.5){
+            mediaConstraints = {'mandatory': {
                             'OfferToReceiveAudio':true, 
                             'OfferToReceiveVideo':false }};
             }
-        } else {
-            mediaConstraints = options.constrains;
-        }
-    } else {
-        mediaConstraints = {'mandatory': {
-                            'OfferToReceiveAudio':true, 
-                            'OfferToReceiveVideo':true }};
-
+            console.log('bandwitdh is ' + bandwitdh + ' [Mbps]');
+        });
     }
+
 
     //callback to start p2p connection between two parties
     commChannel.addCallback('s-answer', call);
-    
+
     commChannel.addCallback('offer', processSignalingMessage);
     commChannel.addCallback('answer', processSignalingMessage);
     commChannel.addCallback('candidate', processSignalingMessage);
