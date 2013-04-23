@@ -29,8 +29,12 @@ var snd = new Audio("data/ringtone.wav");
 var newUsers = {}; 
 
 $(document).ready(function() {
+  //List of people and rooms is either retrived by uncommenting lines below,
+  //or after first successfull login (when the socket server send it to the logged user) 
+
   //loadFromJSON("data/people.json", "ajax-modal", ".people-carousel", false);
   //loadFromJSON("data/rooms.json", "ajax-room-modal", ".rooms-carousel", true);
+
   $('#people_content').hide();
   $('#room_content').hide();
   $('#people').fadeIn();

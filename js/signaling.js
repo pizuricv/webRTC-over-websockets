@@ -64,6 +64,7 @@ var signaling = function(options){
         processSignalingMessage(evt.data);
     }
 
+    //message comes as a JSON from the websocket server
     function processSignalingMessage(message) {
         var msg = JSON.parse(message);
         logg("processSignalingMessage type(" + msg.type + ")= " + message);
