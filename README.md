@@ -1,7 +1,6 @@
 webRTC-over-websockets
 ======================
 
-Demo link: http://54.235.253.99/talk/
 
 Small demo of webRTC over websockets, using node.js and HTML5. It allows you to setup peer2peer and group chat calls. You can also add new users on the fly (but not rooms, there are predefined - see `data` directory). 
 
